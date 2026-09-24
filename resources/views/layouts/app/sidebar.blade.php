@@ -16,6 +16,11 @@
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
+                    
+                    {{-- Licencias --}}
+                    <flux:sidebar.item icon="key" :href="route('licencias')" :current="request()->routeIs('licencias')" wire:navigate>
+                        {{ __('Licencias') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
