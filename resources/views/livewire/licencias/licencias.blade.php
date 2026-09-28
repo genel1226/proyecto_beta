@@ -8,9 +8,11 @@
         </div>
 
         <div class="order-last">
-            <flux:modal.trigger name="nueva-licencia">
-                <flux:button icon="plus" variant="primary">Nueva licencia</flux:button>
-            </flux:modal.trigger>
+            @can('licenses.create')
+                <flux:modal.trigger name="nueva-licencia">
+                    <flux:button icon="plus" variant="primary" wire:click="nuevo">Nueva licencia</flux:button>
+                </flux:modal.trigger>
+            @endcan
 
             <flux:modal name="nueva-licencia" class="max-w-[50vw]! lg:max-w-[960px]! w-full!">
                 <div class="space-y-6">
@@ -18,14 +20,16 @@
                         <flux:heading size="lg">
                             <div class="flex">
                                 <flux:icon.plus />
-                                Nueva licencia
+                                {{ $licencia_id ? 'Editar licencia' : 'Nueva licencia' }}
                             </div>
                         </flux:heading>
                     </div>
 
                     <flux:separator />
 
-                    <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+                    {{-- Si el usuario no puede ver nada del resumen, el formulario ocupa todo el ancho --}}
+                    <div
+                        class="grid grid-cols-1 {{ $verResumen ? 'lg:grid-cols-[1fr_320px]' : '' }} gap-6 items-start">
                         {{-- Columna izquierda: el formulario --}}
                         <div class="space-y-6">
 
@@ -36,13 +40,13 @@
                                     class="mt-1 w-full border border-zinc-300 dark:border-zinc-700 rounded-lg py-3 text-center bg-zinc-50 dark:bg-zinc-800/50">
                                     <span
                                         class="text-2xl font-bold tracking-wide text-blue-600 dark:text-blue-400 tabular-nums">
-                                        {{ $this->proximoCodigo }}
+                                        {{ $licencia_id ? $codigo_actual : $this->proximoCodigo }}
                                     </span>
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
-                                <flux:select wire:model="empresa_id" label="Empresa"
+                                <flux:select wire:model="empresa_id" label="Empresa" :disabled="(bool) $licencia_id"
                                     placeholder="Selecciona una empresa...">
                                     @foreach ($empresas as $empresa)
                                         <flux:select.option value="{{ $empresa->id }}">{{ $empresa->razon_social }}
@@ -58,8 +62,9 @@
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
+                                {{-- El mínimo de "hoy" solo aplica al crear; al editar la fecha de inicio ya puede ser pasada --}}
                                 <flux:input label="Fecha de inicio" type="date" wire:model.live="start_date"
-                                    :min="now()->format('Y-m-d')" />
+                                    :min="$licencia_id ? null : now()->format('Y-m-d')" />
                                 <flux:input label="Fecha de vencimiento" type="date" wire:model="end_date"
                                     :min="$this->minEndDate" />
                             </div>
@@ -72,67 +77,76 @@
                                         <flux:radio value="{{ $plan->id }}" class="flex-1">
                                             <div class="text-center">
                                                 <div class="font-semibold">{{ $plan->nombre }}</div>
-                                                <div class="text-xs text-zinc-500">${{ number_format($plan->monto, 2) }}
-                                                    base</div>
+                                                @if ($verPrecios)
+                                                    <div class="text-xs text-zinc-500">
+                                                        ${{ number_format($plan->monto, 2) }} base</div>
+                                                @endif
                                             </div>
                                         </flux:radio>
                                     @endforeach
                                 </flux:radio.group>
                             </flux:field>
 
-                            {{-- Determina si "Usuarios por tipo" es obligatorio o no --}}
-                            <flux:field>
-                                <flux:label>Estado inicial</flux:label>
-                                <flux:radio.group wire:model.live="estado_inicial" variant="segmented" class="w-full">
-                                    <flux:radio value="V" class="flex-1">
-                                        <div class="text-center">Vigente</div>
-                                    </flux:radio>
-                                    <flux:radio value="P" class="flex-1">
-                                        <div class="text-center">En proceso</div>
-                                    </flux:radio>
-                                </flux:radio.group>
-                                @if ($estado_inicial === 'P')
-                                    <flux:text class="text-xs mt-1">Puedes dejar "Usuarios por tipo" en 0 mientras se
-                                        termina de negociar.</flux:text>
-                                @endif
-                            </flux:field>
+                            {{-- Solo se elige al crear; en edición el estado se cambia con "Dar de baja" --}}
+                            @if (!$licencia_id)
+                                <flux:field>
+                                    <flux:label>Estado inicial</flux:label>
+                                    <flux:radio.group wire:model.live="estado_inicial" variant="segmented"
+                                        class="w-full">
+                                        <flux:radio value="V" class="flex-1">
+                                            <div class="text-center">Vigente</div>
+                                        </flux:radio>
+                                        <flux:radio value="P" class="flex-1">
+                                            <div class="text-center">En proceso</div>
+                                        </flux:radio>
+                                    </flux:radio.group>
+                                    @if ($estado_inicial === 'P')
+                                        <flux:text class="text-xs mt-1">Puedes dejar "Usuarios por tipo" en 0 mientras
+                                            se termina de negociar.</flux:text>
+                                    @endif
+                                </flux:field>
+                            @endif
 
-                            {{-- Usuarios por tipo: stepper con precio inline --}}
+                            {{-- Usuarios por tipo: stepper. El precio solo se muestra con permiso --}}
                             <flux:field>
                                 <flux:label>Cantidad de Usuarios</flux:label>
 
                                 <div
                                     class="border border-zinc-200 dark:border-zinc-700 rounded-lg divide-y divide-zinc-200 dark:divide-zinc-700">
-                                    @foreach ($detalle as $index => $fila)
+                                    @foreach ($tipos as $tipo)
                                         <div class="flex items-center gap-4 px-4 py-3">
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex items-center gap-2">
                                                     <span
                                                         class="text-[11px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 rounded px-1.5 py-0.5">
-                                                        {{ $fila['codigo'] }}
+                                                        {{ $tipo['codigo'] }}
                                                     </span>
-                                                    <span class="font-medium text-sm">{{ $fila['nombre'] }}</span>
+                                                    <span class="font-medium text-sm">{{ $tipo['nombre'] }}</span>
                                                 </div>
-                                                <div class="text-xs text-zinc-500 mt-0.5">
-                                                    ${{ number_format($fila['precio_unitario'], 2) }} por usuario
-                                                </div>
+                                                @if ($verPrecios)
+                                                    <div class="text-xs text-zinc-500 mt-0.5">
+                                                        ${{ number_format($tipo['precio'], 2) }} por usuario
+                                                    </div>
+                                                @endif
                                             </div>
 
                                             <div
                                                 class="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
                                                 <flux:button icon="minus" size="sm" variant="ghost"
-                                                    wire:click="decrementar({{ $index }})" />
+                                                    wire:click="decrementar({{ $tipo['id'] }})" />
                                                 <span class="w-10 text-center font-semibold text-sm tabular-nums">
-                                                    {{ $fila['cantidad'] }}
+                                                    {{ $tipo['cantidad'] }}
                                                 </span>
                                                 <flux:button icon="plus" size="sm" variant="ghost"
-                                                    wire:click="incrementar({{ $index }})" />
+                                                    wire:click="incrementar({{ $tipo['id'] }})" />
                                             </div>
 
-                                            <div
-                                                class="w-20 text-right font-medium text-sm tabular-nums text-zinc-600 dark:text-zinc-400">
-                                                ${{ number_format($fila['cantidad'] * $fila['precio_unitario'], 2) }}
-                                            </div>
+                                            @if ($verPrecios)
+                                                <div
+                                                    class="w-20 text-right font-medium text-sm tabular-nums text-zinc-600 dark:text-zinc-400">
+                                                    ${{ number_format($tipo['cantidad'] * $tipo['precio'], 2) }}
+                                                </div>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
@@ -142,71 +156,111 @@
                                 @enderror
                             </flux:field>
 
-                            <flux:input label="Descuento (USD)" type="number" min="0" step="1"
-                                wire:model.live="descuento"
-                                description="Único monto que edita el vendedor directamente." />
+                            {{-- Descuento: se ve con licenses.descuento.ver, se edita con licenses.descuento.aplicar --}}
+                            @if ($verDescuento)
+                                <flux:input label="Descuento (USD)" type="number" min="0" step="1"
+                                    wire:model.live="descuento" :disabled="!$aplicarDescuento"
+                                    :description="$aplicarDescuento
+                                        ? 'Único monto que edita el vendedor directamente.'
+                                        : 'Solo lectura: no tienes permiso para aplicar descuentos.'" />
+                            @endif
 
-                            <flux:textarea label="Observaciones" wire:model="observaciones"
-                                placeholder="Ej: descuento por pronto pago, condición especial acordada..."
-                                rows="3" />
+                            @if ($verObservaciones)
+                                <flux:textarea label="Observaciones" wire:model="observaciones"
+                                    placeholder="Ej: descuento por pronto pago, condición especial acordada..."
+                                    rows="3" />
+                            @endif
                         </div>
 
-                        {{-- Columna derecha: resumen, siempre visible --}}
-                        <div
-                            class="bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg p-5 space-y-1 lg:sticky lg:top-4">
-                            <flux:heading size="sm" class="mb-3">Resumen</flux:heading>
+                        {{-- Columna derecha: resumen. Cada bloque exige su propio permiso --}}
+                        @if ($verResumen)
+                            <div
+                                class="bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg p-5 space-y-1 lg:sticky lg:top-4">
+                                <flux:heading size="sm" class="mb-3">Resumen</flux:heading>
 
-                            <div class="flex justify-between text-sm text-zinc-600 dark:text-zinc-400 py-1">
-                                <span>Plan {{ $this->planSeleccionado?->nombre ?? '—' }}</span>
-                                <span class="tabular-nums text-zinc-900 dark:text-zinc-100">
-                                    ${{ number_format($this->planSeleccionado->monto ?? 0, 2) }}
-                                </span>
+                                @if ($verPrecios)
+                                    <div class="flex justify-between text-sm text-zinc-600 dark:text-zinc-400 py-1">
+                                        <span>Plan {{ $calculo['plan_nombre'] ?? '—' }}</span>
+                                        <span class="tabular-nums text-zinc-900 dark:text-zinc-100">
+                                            ${{ number_format($calculo['plan_monto'], 2) }}
+                                        </span>
+                                    </div>
+
+                                    @foreach ($tipos as $tipo)
+                                        <div class="flex justify-between text-sm text-zinc-600 dark:text-zinc-400 py-1">
+                                            <span>{{ $tipo['codigo'] }} × {{ $tipo['cantidad'] }}</span>
+                                            <span class="tabular-nums text-zinc-900 dark:text-zinc-100">
+                                                ${{ number_format($tipo['cantidad'] * $tipo['precio'], 2) }}
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                @endif
+
+                                @if ($verDescuento)
+                                    <div class="flex justify-between text-sm text-zinc-600 dark:text-zinc-400 py-1">
+                                        <span>Descuento</span>
+                                        <span class="tabular-nums text-zinc-900 dark:text-zinc-100">
+                                            −${{ number_format($calculo['descuento'], 2) }}
+                                        </span>
+                                    </div>
+                                @endif
+
+                                @if ($verMonto)
+                                    @if ($verPrecios || $verDescuento)
+                                        <flux:separator class="my-3" />
+                                    @endif
+
+                                    <div class="bg-emerald-50 dark:bg-emerald-950/40 rounded-lg p-4">
+                                        <div
+                                            class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+                                            <flux:icon.lock-closed class="size-3" />
+                                            MONTO TOTAL — calculado automáticamente
+                                        </div>
+                                        <div
+                                            class="text-3xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-400">
+                                            ${{ number_format($calculo['total'], 2) }}
+                                        </div>
+                                        <div class="text-xs text-zinc-500 mt-1">plan + usuarios − descuento. No es
+                                            editable.
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
-
-                            @foreach ($detalle as $fila)
-                                <div class="flex justify-between text-sm text-zinc-600 dark:text-zinc-400 py-1">
-                                    <span>{{ $fila['codigo'] }} × {{ $fila['cantidad'] }}</span>
-                                    <span class="tabular-nums text-zinc-900 dark:text-zinc-100">
-                                        ${{ number_format($fila['cantidad'] * $fila['precio_unitario'], 2) }}
-                                    </span>
-                                </div>
-                            @endforeach
-
-                            <div class="flex justify-between text-sm text-zinc-600 dark:text-zinc-400 py-1">
-                                <span>Descuento</span>
-                                <span class="tabular-nums text-zinc-900 dark:text-zinc-100">
-                                    −${{ number_format($descuento, 2) }}
-                                </span>
-                            </div>
-
-                            <flux:separator class="my-3" />
-
-                            <div class="bg-emerald-50 dark:bg-emerald-950/40 rounded-lg p-4">
-                                <div
-                                    class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
-                                    <flux:icon.lock-closed class="size-3" />
-                                    MONTO TOTAL — calculado automáticamente
-                                </div>
-                                <div
-                                    class="text-3xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-400">
-                                    ${{ number_format($this->totalCalculado, 2) }}
-                                </div>
-                                <div class="text-xs text-zinc-500 mt-1">plan + usuarios − descuento. No es editable.
-                                </div>
-                            </div>
-                        </div>
+                        @endif
                     </div>
 
                     <div class="flex">
                         <flux:spacer />
                         <flux:button type="button" wire:click="guardar" variant="primary">
-                            Guardar licencia
+                            {{ $licencia_id ? 'Guardar cambios' : 'Guardar licencia' }}
                         </flux:button>
                     </div>
                 </div>
             </flux:modal>
         </div>
     </div>
+
+    <flux:modal name="confirmar-baja" class="min-w-[22rem]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">¿Dar de baja la licencia?</flux:heading>
+                <flux:text class="mt-2">
+                    Vas a dar de baja la licencia <strong>{{ $baja_codigo }}</strong>.<br>
+                    Pasará a estado Cancelada y esta acción no se puede deshacer.
+                </flux:text>
+            </div>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button variant="ghost">Cancelar</flux:button>
+                </flux:modal.close>
+                <flux:button variant="danger" wire:click="darDeBaja">Sí, dar de baja</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:toast />
 
     <livewire:licencias.licencias-tabla />
 </div>

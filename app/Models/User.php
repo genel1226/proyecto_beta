@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
@@ -36,6 +37,21 @@ class User extends Authenticatable implements PasskeyUser
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
+     * Código que identifica a este modelo en la columna `model_type`
+     * (char(2)) de model_has_permissions. Se define aquí una sola vez;
+     * el seeder y las consultas lo leen de esta constante.
+     */
+    public const PERMISOS_MODEL_TYPE = 'US';
+
+    /**
+     * Permisos del usuario, cargados una sola vez por request.
+     * Sin esto, cada @can / Gate::allows dispararía su propia consulta.
+     *
+     * @var array<int, string>|null
+     */
+    private ?array $permisosCache = null;
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -46,6 +62,40 @@ class User extends Authenticatable implements PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Nombres de todos los permisos activos asignados directamente a
+     * este usuario. Es aditivo: cada fila de model_has_permissions SUMA
+     * un permiso, y borrarla lo quita. No hay permisos heredados de roles.
+     *
+     * @return array<int, string>
+     */
+    public function permisos(): array
+    {
+        return $this->permisosCache ??= DB::table('model_has_permissions')
+            ->join('permissions', 'permissions.id', '=', 'model_has_permissions.permission_id')
+            ->where('model_has_permissions.model_type', self::PERMISOS_MODEL_TYPE)
+            ->where('model_has_permissions.model_id', $this->id)
+            ->where('permissions.active', 1)
+            ->whereNull('permissions.deleted_at')
+            ->pluck('permissions.name')
+            ->all();
+    }
+
+    public function tienePermiso(string $permiso): bool
+    {
+        return in_array($permiso, $this->permisos(), true);
+    }
+
+    /**
+     * Llamar después de modificar los permisos del usuario (por ejemplo,
+     * desde la pantalla de switches) si se van a volver a consultar en
+     * ese mismo request.
+     */
+    public function olvidarPermisos(): void
+    {
+        $this->permisosCache = null;
     }
 
     /**
