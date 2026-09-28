@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Catálogo de permisos del sistema (21 permisos en 6 módulos).
+ * Catálogo de permisos del sistema (22 permisos en 6 módulos).
  *
  * Se puede correr las veces que haga falta: si un permiso ya existe
  * (mismo name + guard_name) lo actualiza en vez de duplicarlo.
@@ -42,6 +42,7 @@ class PermisosSeeder extends Seeder
                 ['empresas.index', '1', 'Ver la lista de empresas', 'View the companies list'],
                 ['empresas.create', '2', 'Crear empresas', 'Create companies'],
                 ['empresas.edit', '2', 'Editar empresas', 'Edit companies'],
+                ['empresas.desactivar', '2', 'Desactivar y reactivar empresas', 'Deactivate and reactivate companies'],
             ],
         ],
 
@@ -57,6 +58,8 @@ class PermisosSeeder extends Seeder
                 ['licenses.descuento.aplicar', '2', 'Aplicar o modificar descuentos (requiere ver descuentos)', 'Apply or change discounts'],
                 ['licenses.precios.ver', '1', 'Ver precios por tipo de usuario y monto base del plan', 'View per-user prices and plan base price'],
                 ['licenses.observaciones.ver', '1', 'Ver y escribir las observaciones de una licencia', 'View and write license notes'],
+                ['licenses.renovar', '2', 'Renovar licencias (registrar el pago de un nuevo período)', 'Renew licenses'],
+                ['licenses.activar', '2', 'Activar licencias en proceso y reactivar licencias dadas de baja', 'Activate or reactivate licenses'],
             ],
         ],
 

@@ -52,7 +52,14 @@ final class LicenciasTabla extends PowerGridComponent
         // with() evita el problema de N+1 consultas: sin esto, por cada
         // fila se dispararía una consulta aparte para traer el nombre
         // de la empresa y otra para el plan.
-        return Licencia::query()->with(['empresa', 'plan']);
+        //
+        // renovaciones_count: cuántos pagos de renovación tiene la licencia
+        // (los que traen fecha_vencimiento_anterior). De ahí sale "Renovada".
+        return Licencia::query()
+            ->with(['empresa', 'plan'])
+            ->withCount([
+                'pagos as renovaciones_count' => fn ($q) => $q->whereNotNull('fecha_vencimiento_anterior'),
+            ]);
     }
 
     public function relationSearch(): array
@@ -120,6 +127,20 @@ final class LicenciasTabla extends PowerGridComponent
                 );
             })
 
+            // "Renovada ×2": cuántas veces se pagó antes de vencer.
+            ->add('renovada_badge', function (Licencia $model) {
+                $veces = (int) ($model->renovaciones_count ?? 0);
+
+                if ($veces === 0) {
+                    return '—';
+                }
+
+                return Blade::render(
+                    '<flux:badge color="violet" size="sm">Renovada ×{{ $veces }}</flux:badge>',
+                    ['veces' => $veces]
+                );
+            })
+
             ->add('observaciones')
             ->add('created_at_formatted', fn (Licencia $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
     }
@@ -132,7 +153,10 @@ final class LicenciasTabla extends PowerGridComponent
      */
     public function columns(): array
     {
-        $hayAcciones = Gate::allows('licenses.edit') || Gate::allows('licenses.baja');
+        $hayAcciones = Gate::allows('licenses.edit')
+            || Gate::allows('licenses.renovar')
+            || Gate::allows('licenses.activar')
+            || Gate::allows('licenses.baja');
 
         return [
             // Column::make('Id', 'id'),
@@ -175,6 +199,8 @@ final class LicenciasTabla extends PowerGridComponent
             Column::make('Estado', 'estado_badge', 'estado')
                 ->sortable(),
 
+            Column::make('Renovada', 'renovada_badge'),
+
             ...$this->cuando(Gate::allows('licenses.observaciones.ver'), [
                 Column::make('Observaciones', 'observaciones')
                     ->sortable()
@@ -208,12 +234,25 @@ final class LicenciasTabla extends PowerGridComponent
         ];
     }
 
+    // Cada botón dispara un evento que esta tabla reenvía al componente
+    // Licencias (el de los modales), que es quien vuelve a validar el permiso.
+
     #[On('edit')]
     public function edit($rowId): void
     {
-        // Reenvía el aviso al componente Licencias (el del modal), que
-        // es quien sabe cómo cargar el formulario y quien valida el permiso.
         $this->dispatch('editar-licencia', id: $rowId);
+    }
+
+    #[On('renovar')]
+    public function renovar($rowId): void
+    {
+        $this->dispatch('confirmar-renovacion', id: $rowId);
+    }
+
+    #[On('activar')]
+    public function activar($rowId): void
+    {
+        $this->dispatch('confirmar-activacion', id: $rowId);
     }
 
     #[On('baja')]
@@ -223,26 +262,51 @@ final class LicenciasTabla extends PowerGridComponent
     }
 
     /**
-     * Los botones se deciden fila por fila: solo aparecen si el usuario
-     * tiene el permiso Y la licencia todavía admite ese cambio
-     * (Vencida y Cancelada ya son estados finales).
+     * Los botones se deciden fila por fila: solo aparecen si el usuario tiene
+     * el permiso Y el estado de la licencia admite esa acción.
+     *
+     *   Vigente / Por vencer -> editar, renovar, dar de baja
+     *   En proceso           -> editar, activar, dar de baja
+     *   Cancelada            -> reactivar
+     *   Vencida              -> nada (para seguir, se crea una licencia nueva)
      */
     public function actions(Licencia $row): array
     {
         $botones = [];
-        $admiteCambios = in_array($row->estado, ['V', 'X', 'P'], true);
 
-        if ($admiteCambios && Gate::allows('licenses.edit')) {
+        $vigente = in_array($row->estado, ['V', 'X'], true);
+        $enProceso = $row->estado === 'P';
+        $cancelada = $row->estado === 'C';
+
+        if (($vigente || $enProceso) && Gate::allows('licenses.edit')) {
             $botones[] = Button::add('edit')
-                ->slot(Blade::render('<flux:icon.pencil-square class="size-4" />'))
+                ->slot(Blade::render('<span title="Editar"><flux:icon.pencil-square class="size-4" /></span>'))
                 ->id()
                 ->class('pg-btn-white dark:ring-pg-primary-600 dark:border-pg-primary-600 dark:hover:bg-pg-primary-700 dark:ring-offset-pg-primary-800 dark:text-pg-primary-300 dark:bg-pg-primary-700')
                 ->dispatch('edit', ['rowId' => $row->id]);
         }
 
-        if ($admiteCambios && Gate::allows('licenses.baja')) {
+        if ($vigente && Gate::allows('licenses.renovar')) {
+            $botones[] = Button::add('renovar')
+                ->slot(Blade::render('<span title="Renovar"><flux:icon.arrow-path class="size-4" /></span>'))
+                ->id()
+                ->class('pg-btn-white text-blue-600 border-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950')
+                ->dispatch('renovar', ['rowId' => $row->id]);
+        }
+
+        if (($enProceso || $cancelada) && Gate::allows('licenses.activar')) {
+            $titulo = $cancelada ? 'Reactivar' : 'Activar';
+
+            $botones[] = Button::add('activar')
+                ->slot(Blade::render('<span title="'.$titulo.'"><flux:icon.check-circle class="size-4" /></span>'))
+                ->id()
+                ->class('pg-btn-white text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950')
+                ->dispatch('activar', ['rowId' => $row->id]);
+        }
+
+        if (($vigente || $enProceso) && Gate::allows('licenses.baja')) {
             $botones[] = Button::add('baja')
-                ->slot(Blade::render('<flux:icon.trash class="size-4" />'))
+                ->slot(Blade::render('<span title="Dar de baja"><flux:icon.trash class="size-4" /></span>'))
                 ->id()
                 ->class('pg-btn-white text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950')
                 ->dispatch('baja', ['rowId' => $row->id]);

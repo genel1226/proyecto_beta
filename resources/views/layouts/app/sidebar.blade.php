@@ -21,6 +21,11 @@
                     <flux:sidebar.item icon="key" :href="route('licencias')" :current="request()->routeIs('licencias')" wire:navigate>
                         {{ __('Licencias') }}
                     </flux:sidebar.item>
+
+                    {{-- Empresas --}}
+                    <flux:sidebar.item icon="building-office" :href="route('empresas')" :current="request()->routeIs('empresas')" wire:navigate>
+                        {{ __('Empresas') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 

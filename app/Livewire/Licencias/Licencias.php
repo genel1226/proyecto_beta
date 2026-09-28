@@ -6,7 +6,9 @@ use App\Models\Empresa\Empresa;
 use App\Models\Licencias\Licencias as ModelsLicencias;
 use App\Models\Plan\Plan;
 use App\Models\TipoUsuario\TipoUsuario;
+use App\Services\AccesoEmpresa;
 use Flux\Flux;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -51,11 +53,6 @@ class Licencias extends Component
 
     public string $codigo_actual = '';
 
-    #[Locked]
-    public ?int $baja_id = null;
-
-    public string $baja_codigo = '';
-
     /**
      * tipo_usuario_id => cantidad.
      *
@@ -66,6 +63,33 @@ class Licencias extends Component
      * @var array<int, int>
      */
     public array $cantidades = [];
+
+    // ---- Modal de baja ----
+
+    #[Locked]
+    public ?int $baja_id = null;
+
+    public string $baja_codigo = '';
+
+    // ---- Modal de renovación ----
+
+    #[Locked]
+    public ?int $renovar_id = null;
+
+    public string $renovar_codigo = '';
+
+    /** Solo se usa si la licencia es de periodicidad personalizada. */
+    public string $renovar_hasta = '';
+
+    // ---- Modal de activación / reactivación ----
+
+    #[Locked]
+    public ?int $activar_id = null;
+
+    #[Locked]
+    public bool $activar_reactivar = false;
+
+    public string $activar_codigo = '';
 
     public function mount(): void
     {
@@ -280,8 +304,7 @@ class Licencias extends Component
         ];
 
         // En edición el estado no se toca aquí (ese campo ni se muestra),
-        // así que solo se valida al crear. Antes se validaba siempre y una
-        // licencia en 'X' (Por vencer) no se podía guardar sin ver ningún error.
+        // así que solo se valida al crear.
         if (! $editando) {
             $reglas['estado_inicial'] = ['required', 'in:V,P'];
         }
@@ -375,6 +398,13 @@ class Licencias extends Component
             }
 
             $licencia->detalleUsuarios()->whereNotIn('id', $conservados)->delete();
+
+            // Licencia Vigente: la empresa puede entrar al CMMS (y si estaba
+            // inactiva por un vencimiento anterior, se reactiva; si era demo,
+            // deja de serlo). En proceso no da acceso todavía.
+            if (in_array($licencia->estado, ['V', 'X'], true)) {
+                AccesoEmpresa::otorgar($licencia);
+            }
         });
 
         $this->modal('nueva-licencia')->close();
@@ -382,6 +412,251 @@ class Licencias extends Component
 
         $this->nuevo();
     }
+
+    // =====================================================================
+    // RENOVAR: el pago llega antes de vencer.
+    // La fecha de vencimiento pasa a ser la fecha de inicio y la nueva fecha
+    // de vencimiento se calcula según la periodicidad. Cada renovación
+    // queda en licencia_pagos, y de ahí sale el "Renovada" de la tabla.
+    // Si la licencia YA venció, no se renueva: se crea una licencia nueva.
+    // =====================================================================
+
+    #[On('confirmar-renovacion')]
+    public function confirmarRenovacion(int $id): void
+    {
+        if (! $this->autorizar('licenses.renovar')) {
+            return;
+        }
+
+        $licencia = ModelsLicencias::findOrFail($id);
+
+        if ($mensaje = $this->motivoNoRenovable($licencia)) {
+            Flux::toast(heading: 'No se puede renovar', text: $mensaje, variant: 'warning');
+
+            return;
+        }
+
+        $this->renovar_id = $licencia->id;
+        $this->renovar_codigo = (string) $licencia->codigo_licencia;
+        $this->renovar_hasta = '';
+
+        $this->resetErrorBag();
+        $this->modal('confirmar-renovacion')->show();
+    }
+
+    public function renovar(): void
+    {
+        if (! $this->renovar_id) {
+            return;
+        }
+
+        if (! $this->autorizar('licenses.renovar')) {
+            $this->cerrarRenovacion();
+
+            return;
+        }
+
+        $licencia = ModelsLicencias::findOrFail($this->renovar_id);
+
+        if ($mensaje = $this->motivoNoRenovable($licencia)) {
+            $this->cerrarRenovacion();
+            Flux::toast(heading: 'No se puede renovar', text: $mensaje, variant: 'warning');
+
+            return;
+        }
+
+        // Personalizada: no hay forma de calcular el período, se pide la fecha.
+        if ($licencia->periodicidad === 'P') {
+            $this->validate(
+                ['renovar_hasta' => ['required', 'date', 'after:'.$licencia->fecha_vencimiento->toDateString()]],
+                [
+                    'required' => 'Indica hasta cuándo se renueva.',
+                    'date' => 'Escribe una fecha válida.',
+                    'after' => 'La nueva fecha debe ser posterior al vencimiento actual.',
+                ]
+            );
+        }
+
+        [$inicio, $fin] = $this->periodoRenovacion($licencia);
+
+        DB::transaction(function () use ($licencia, $inicio, $fin) {
+            $licencia->pagos()->create([
+                'fecha_pago' => now(),
+                'monto' => $licencia->monto,
+                'fecha_vencimiento_anterior' => $inicio->toDateString(),
+                'fecha_vencimiento_nueva' => $fin->toDateString(),
+                'registrado_por' => Auth::id(),
+            ]);
+
+            $licencia->update([
+                'fecha_inicio' => $inicio->toDateString(),
+                'fecha_vencimiento' => $fin->toDateString(),
+                'estado' => 'V',
+            ]);
+
+            AccesoEmpresa::otorgar($licencia);
+        });
+
+        $codigo = $this->renovar_codigo;
+
+        $this->cerrarRenovacion();
+        $this->dispatch('licencia-creada');
+
+        Flux::toast(
+            heading: 'Licencia renovada',
+            text: "La licencia {$codigo} se renovó hasta el {$fin->format('d/m/Y')}.",
+            variant: 'success',
+        );
+    }
+
+    private function motivoNoRenovable(ModelsLicencias $licencia): ?string
+    {
+        if (! in_array($licencia->estado, ['V', 'X'], true)) {
+            return "La licencia {$licencia->codigo_licencia} no está vigente. Si ya venció, crea una licencia nueva.";
+        }
+
+        if ($licencia->fecha_vencimiento->lt(today())) {
+            return "La licencia {$licencia->codigo_licencia} ya venció el {$licencia->fecha_vencimiento->format('d/m/Y')}. Crea una licencia nueva.";
+        }
+
+        return null;
+    }
+
+    /**
+     * [inicio, fin] del nuevo período. El nuevo inicio es el vencimiento
+     * actual. El fin es un mes o un año después (sin pasarse de fin de mes:
+     * 31/01 + 1 mes = 28/02), o la fecha elegida si es personalizada.
+     *
+     * @return array{0: Carbon, 1: ?Carbon}
+     */
+    private function periodoRenovacion(ModelsLicencias $licencia): array
+    {
+        $inicio = $licencia->fecha_vencimiento->copy();
+
+        $fin = match ($licencia->periodicidad) {
+            'M' => $inicio->copy()->addMonthNoOverflow(),
+            'A' => $inicio->copy()->addYearNoOverflow(),
+            default => $this->renovar_hasta !== '' ? Carbon::parse($this->renovar_hasta) : null,
+        };
+
+        return [$inicio, $fin];
+    }
+
+    private function cerrarRenovacion(): void
+    {
+        $this->modal('confirmar-renovacion')->close();
+        $this->reset(['renovar_id', 'renovar_codigo', 'renovar_hasta']);
+        $this->resetErrorBag();
+    }
+
+    // =====================================================================
+    // ACTIVAR / REACTIVAR
+    //   - En proceso -> Vigente: se cierra el trato.
+    //   - Cancelada  -> Vigente: se revierte una baja.
+    // Activar le devuelve el acceso al CMMS a la empresa, así que es una
+    // acción explícita y con su propio permiso, no algo automático.
+    // =====================================================================
+
+    #[On('confirmar-activacion')]
+    public function confirmarActivacion(int $id): void
+    {
+        if (! $this->autorizar('licenses.activar')) {
+            return;
+        }
+
+        $licencia = ModelsLicencias::findOrFail($id);
+
+        if ($mensaje = $this->motivoNoActivable($licencia)) {
+            Flux::toast(heading: 'No se puede activar', text: $mensaje, variant: 'warning');
+
+            return;
+        }
+
+        $this->activar_id = $licencia->id;
+        $this->activar_codigo = (string) $licencia->codigo_licencia;
+        $this->activar_reactivar = $licencia->estado === 'C';
+
+        $this->modal('confirmar-activacion')->show();
+    }
+
+    public function activar(): void
+    {
+        if (! $this->activar_id) {
+            return;
+        }
+
+        if (! $this->autorizar('licenses.activar')) {
+            $this->cerrarActivacion();
+
+            return;
+        }
+
+        $licencia = ModelsLicencias::findOrFail($this->activar_id);
+
+        if ($mensaje = $this->motivoNoActivable($licencia)) {
+            $this->cerrarActivacion();
+            Flux::toast(heading: 'No se puede activar', text: $mensaje, variant: 'warning');
+
+            return;
+        }
+
+        $reactivada = $this->activar_reactivar;
+        $codigo = $this->activar_codigo;
+
+        DB::transaction(function () use ($licencia) {
+            $licencia->update(['estado' => 'V']);
+            AccesoEmpresa::otorgar($licencia);
+        });
+
+        $this->cerrarActivacion();
+        $this->dispatch('licencia-creada');
+
+        Flux::toast(
+            heading: $reactivada ? 'Licencia reactivada' : 'Licencia activada',
+            text: "La licencia {$codigo} quedó Vigente y la empresa recuperó el acceso al CMMS.",
+            variant: 'success',
+        );
+    }
+
+    private function motivoNoActivable(ModelsLicencias $licencia): ?string
+    {
+        $codigo = $licencia->codigo_licencia;
+
+        if (! in_array($licencia->estado, ['P', 'C'], true)) {
+            return "La licencia {$codigo} ya está activa o vencida.";
+        }
+
+        if ($licencia->fecha_vencimiento->lt(today())) {
+            return "La licencia {$codigo} ya venció el {$licencia->fecha_vencimiento->format('d/m/Y')}. Crea una licencia nueva.";
+        }
+
+        if ($licencia->detalleUsuarios()->sum('cantidad') < 1) {
+            return "La licencia {$codigo} no tiene usuarios. Edítala y agrega al menos uno.";
+        }
+
+        $otraActiva = ModelsLicencias::where('empresa_id', $licencia->empresa_id)
+            ->whereIn('estado', ['V', 'X', 'P'])
+            ->where('id', '!=', $licencia->id)
+            ->exists();
+
+        if ($otraActiva) {
+            return 'Esta empresa ya tiene otra licencia activa.';
+        }
+
+        return null;
+    }
+
+    private function cerrarActivacion(): void
+    {
+        $this->modal('confirmar-activacion')->close();
+        $this->reset(['activar_id', 'activar_reactivar', 'activar_codigo']);
+    }
+
+    // =====================================================================
+    // DAR DE BAJA (reversible con "Reactivar").
+    // Pasa a Cancelada (C), que es un código distinto de Vencida (N), y la
+    // empresa pierde el acceso al CMMS.
+    // =====================================================================
 
     /**
      * Lo dispara LicenciasTabla al hacer clic en "Dar de baja".
@@ -421,8 +696,7 @@ class Licencias extends Component
         // Se vuelve a validar aquí: el permiso pudo cambiar mientras el modal
         // estaba abierto, o alguien pudo llamar este método directamente.
         if (! $this->autorizar('licenses.baja')) {
-            $this->modal('confirmar-baja')->close();
-            $this->reset(['baja_id', 'baja_codigo']);
+            $this->cerrarBaja();
 
             return;
         }
@@ -430,26 +704,34 @@ class Licencias extends Component
         $licencia = ModelsLicencias::findOrFail($this->baja_id);
 
         if (! in_array($licencia->estado, ['V', 'X', 'P'], true)) {
-            $this->modal('confirmar-baja')->close();
-            $this->reset(['baja_id', 'baja_codigo']);
+            $this->cerrarBaja();
 
             return;
         }
 
-        $licencia->estado = 'C';
-        $licencia->save();
+        DB::transaction(function () use ($licencia) {
+            $licencia->estado = 'C';
+            $licencia->save();
+
+            AccesoEmpresa::suspender($licencia->empresa);
+        });
 
         $codigo = $this->baja_codigo;
 
-        $this->modal('confirmar-baja')->close();
-        $this->reset(['baja_id', 'baja_codigo']);
+        $this->cerrarBaja();
         $this->dispatch('licencia-creada'); // refresca la tabla
 
         Flux::toast(
             heading: 'Licencia dada de baja',
-            text: "La licencia {$codigo} se dio de baja correctamente.",
+            text: "La licencia {$codigo} se dio de baja y la empresa quedó sin acceso al CMMS.",
             variant: 'success',
         );
+    }
+
+    private function cerrarBaja(): void
+    {
+        $this->modal('confirmar-baja')->close();
+        $this->reset(['baja_id', 'baja_codigo']);
     }
 
     /**
@@ -479,11 +761,27 @@ class Licencias extends Component
         $verMonto = Gate::allows('licenses.monto.ver');
         $verDescuento = Gate::allows('licenses.descuento.ver');
 
+        // Vista previa del modal de renovación: período actual y nuevo período.
+        $renovacion = null;
+
+        if ($this->renovar_id && $lic = ModelsLicencias::find($this->renovar_id)) {
+            [$inicio, $fin] = $this->periodoRenovacion($lic);
+
+            $renovacion = [
+                'periodicidad' => $lic->periodicidad,
+                'actual_inicio' => $lic->fecha_inicio,
+                'actual_fin' => $lic->fecha_vencimiento,
+                'inicio' => $inicio,
+                'fin' => $fin,
+            ];
+        }
+
         return view('livewire.licencias.licencias', [
             'empresas' => Empresa::orderBy('razon_social')->get(),
             'planes' => Plan::primarios()->orderBy('monto')->get(),
             'tipos' => $tipos,
             'calculo' => $this->calcular($tipos),
+            'renovacion' => $renovacion,
 
             // Qué puede ver / hacer este usuario dentro del formulario
             'verPrecios' => $verPrecios,

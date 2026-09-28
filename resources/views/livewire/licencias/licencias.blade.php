@@ -240,13 +240,15 @@
         </div>
     </div>
 
+    {{-- ===== Dar de baja (reversible con "Reactivar") ===== --}}
     <flux:modal name="confirmar-baja" class="min-w-[22rem]">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">¿Dar de baja la licencia?</flux:heading>
                 <flux:text class="mt-2">
                     Vas a dar de baja la licencia <strong>{{ $baja_codigo }}</strong>.<br>
-                    Pasará a estado Cancelada y esta acción no se puede deshacer.
+                    Pasará a estado Cancelada y <strong>la empresa perderá el acceso al CMMS</strong>.<br>
+                    Mientras no haya vencido, la podrás reactivar.
                 </flux:text>
             </div>
 
@@ -256,6 +258,78 @@
                     <flux:button variant="ghost">Cancelar</flux:button>
                 </flux:modal.close>
                 <flux:button variant="danger" wire:click="darDeBaja">Sí, dar de baja</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- ===== Renovar: el pago llega antes de vencer ===== --}}
+    <flux:modal name="confirmar-renovacion" class="min-w-[24rem]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">¿Renovar la licencia?</flux:heading>
+                <flux:text class="mt-2">
+                    Vas a registrar el pago de la licencia <strong>{{ $renovar_codigo }}</strong>.
+                    El vencimiento actual pasa a ser la fecha de inicio del nuevo período.
+                </flux:text>
+            </div>
+
+            @if ($renovacion)
+                <div
+                    class="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 p-4 text-sm space-y-2">
+                    <div class="flex justify-between gap-4 text-zinc-600 dark:text-zinc-400">
+                        <span>Período actual</span>
+                        <span class="tabular-nums">
+                            {{ $renovacion['actual_inicio']->format('d/m/Y') }} →
+                            {{ $renovacion['actual_fin']->format('d/m/Y') }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between gap-4 font-semibold">
+                        <span>Nuevo período</span>
+                        <span class="tabular-nums">
+                            {{ $renovacion['inicio']->format('d/m/Y') }} →
+                            {{ $renovacion['fin']?->format('d/m/Y') ?? '—' }}
+                        </span>
+                    </div>
+                </div>
+
+                {{-- Personalizada: no se puede calcular el período, se elige la fecha --}}
+                @if ($renovacion['periodicidad'] === 'P')
+                    <flux:input type="date" label="Renovar hasta *" wire:model.live="renovar_hasta"
+                        :min="$renovacion['actual_fin']->copy()->addDay()->format('Y-m-d')" />
+                @endif
+            @endif
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button variant="ghost">Cancelar</flux:button>
+                </flux:modal.close>
+                <flux:button variant="primary" wire:click="renovar">Sí, renovar</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- ===== Activar (En proceso) o Reactivar (Cancelada) ===== --}}
+    <flux:modal name="confirmar-activacion" class="min-w-[22rem]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">
+                    {{ $activar_reactivar ? '¿Reactivar la licencia?' : '¿Activar la licencia?' }}
+                </flux:heading>
+                <flux:text class="mt-2">
+                    La licencia <strong>{{ $activar_codigo }}</strong> pasará a estado Vigente y
+                    <strong>la empresa recuperará el acceso al CMMS</strong>.
+                </flux:text>
+            </div>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button variant="ghost">Cancelar</flux:button>
+                </flux:modal.close>
+                <flux:button variant="primary" wire:click="activar">
+                    {{ $activar_reactivar ? 'Sí, reactivar' : 'Sí, activar' }}
+                </flux:button>
             </div>
         </div>
     </flux:modal>

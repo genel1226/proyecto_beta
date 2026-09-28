@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Empresas\Empresas;
 use App\Livewire\Licencias\Licencias;
 use Illuminate\Support\Facades\Route;
 
@@ -9,6 +10,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
 });
 
+// Rutas livewire
+
+// Licencias
 Route::livewire('licencias', Licencias::class)->name('licencias');
+
+// Empresas
+Route::livewire('empresas', Empresas::class)->name('empresas');
 
 require __DIR__.'/settings.php';

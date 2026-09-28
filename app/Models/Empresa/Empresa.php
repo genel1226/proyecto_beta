@@ -21,10 +21,13 @@ class Empresa extends Model
         'active',
         'pais',
         'direccion',
+        'pagina_web',
+        'trial_ends_at',
     ];
 
     protected $casts = [
         'active' => 'boolean',
+        'trial_ends_at' => 'datetime',
     ];
 
     public function licencias(): HasMany
