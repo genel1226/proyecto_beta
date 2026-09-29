@@ -20,3 +20,16 @@ Schedule::command('licencias:procesar --solo=alertas')
     ->dailyAt('08:00')
     ->withoutOverlapping();
 
+
+
+
+    
+Schedule::command('licencias:procesar --solo=vencimientos')
+    ->dailyAt('00:05')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/licencias-cron.log'));
+
+Schedule::command('licencias:procesar --solo=alertas')
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/licencias-cron.log'));

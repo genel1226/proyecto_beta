@@ -1,9 +1,9 @@
 <div>
     {{-- Very little is needed to make a happy life. - Marcus Aurelius --}}
 
-    <div class="flex justify-between py-6 bg-zinc-100 px-3 my-5">
-        <div class="order-first flex gap-2">
-            <flux:icon.building-office />
+    <div class="flex justify-between py-6 bg-zinc-100 px-3 my-5 dark:bg-zinc-800">
+        <div class="order-first flex gap-2 text-4xl font-bold items-center gap-2 text-zinc-700 dark:text-zinc-200">
+            <flux:icon.building-office class="size-12" />
             Empresas
         </div>
 

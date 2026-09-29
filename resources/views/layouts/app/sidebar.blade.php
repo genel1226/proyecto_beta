@@ -18,7 +18,7 @@
                     </flux:sidebar.item>
                     
                     {{-- Licencias --}}
-                    <flux:sidebar.item icon="key" :href="route('licencias')" :current="request()->routeIs('licencias')" wire:navigate>
+                    <flux:sidebar.item icon="clipboard-document-list" :href="route('licencias')" :current="request()->routeIs('licencias')" wire:navigate>
                         {{ __('Licencias') }}
                     </flux:sidebar.item>
 

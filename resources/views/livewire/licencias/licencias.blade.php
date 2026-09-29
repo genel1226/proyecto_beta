@@ -1,10 +1,10 @@
 <div>
     {{-- I have not failed. I've just found 10,000 ways that won't work. - Thomas Edison --}}
 
-    <div class="flex justify-between py-6 bg-zinc-100 px-3 my-5">
-        <div class="order-first flex">
-            <flux:icon.plus />
-            Licencias view
+    <div class="flex justify-between py-6 bg-zinc-100 px-3 my-5 dark:bg-zinc-800">
+        <div class="order-first flex text-4xl font-bold items-center gap-2 text-zinc-700 dark:text-zinc-200">
+            <flux:icon.clipboard-document-list class="size-12" />
+            Licencias
         </div>
 
         <div class="order-last">
