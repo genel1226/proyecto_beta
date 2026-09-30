@@ -58,7 +58,7 @@ final class LicenciasTabla extends PowerGridComponent
         return Licencia::query()
             ->with(['empresa', 'plan'])
             ->withCount([
-                'pagos as renovaciones_count' => fn($q) => $q->whereNotNull('fecha_vencimiento_anterior'),
+                'pagos as renovaciones_count' => fn ($q) => $q->whereNotNull('fecha_vencimiento_anterior'),
             ]);
     }
 
@@ -81,17 +81,17 @@ final class LicenciasTabla extends PowerGridComponent
             ->add('empresa_id')
             ->add('plan_id')
             ->add('codigo_licencia')
-            ->add('codigo_licencia_lower', fn(Licencia $model) => strtolower(e($model->codigo_licencia)))
+            ->add('codigo_licencia_lower', fn (Licencia $model) => strtolower(e($model->codigo_licencia)))
 
             // Nombre de empresa y plan, en vez del id crudo
-            ->add('empresa_nombre', fn(Licencia $model) => e($model->empresa?->razon_social ?? '—'))
-            ->add('plan_nombre', fn(Licencia $model) => e($model->plan?->nombre ?? '—'))
+            ->add('empresa_nombre', fn (Licencia $model) => e($model->empresa?->razon_social ?? '—'))
+            ->add('plan_nombre', fn (Licencia $model) => e($model->plan?->nombre ?? '—'))
 
-            ->add('fecha_inicio_formatted', fn(Licencia $model) => Carbon::parse($model->fecha_inicio)->format('d/m/Y'))
-            ->add('fecha_vencimiento_formatted', fn(Licencia $model) => Carbon::parse($model->fecha_vencimiento)->format('d/m/Y'))
+            ->add('fecha_inicio_formatted', fn (Licencia $model) => Carbon::parse($model->fecha_inicio)->format('d/m/Y'))
+            ->add('fecha_vencimiento_formatted', fn (Licencia $model) => Carbon::parse($model->fecha_vencimiento)->format('d/m/Y'))
 
             // Periodicidad legible en vez del char crudo (M/A/P)
-            ->add('periodicidad_formatted', fn(Licencia $model) => match ($model->periodicidad) {
+            ->add('periodicidad_formatted', fn (Licencia $model) => match ($model->periodicidad) {
                 'M' => 'Mensual',
                 'A' => 'Anual',
                 'P' => 'Personalizada',
@@ -142,7 +142,7 @@ final class LicenciasTabla extends PowerGridComponent
             })
 
             ->add('observaciones')
-            ->add('created_at_formatted', fn(Licencia $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
+            ->add('created_at_formatted', fn (Licencia $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
     }
 
     /**
@@ -153,11 +153,6 @@ final class LicenciasTabla extends PowerGridComponent
      */
     public function columns(): array
     {
-        $hayAcciones = Gate::allows('licenses.edit')
-            || Gate::allows('licenses.renovar')
-            || Gate::allows('licenses.activar')
-            || Gate::allows('licenses.baja');
-
         return [
             // Column::make('Id', 'id'),
 
@@ -210,9 +205,10 @@ final class LicenciasTabla extends PowerGridComponent
             // Column::make('Created at', 'created_at_formatted', 'created_at')
             //     ->sortable(),
 
-            ...$this->cuando($hayAcciones, [
-                Column::action('Action'),
-            ]),
+            // Siempre declarada: PowerGrid la exige porque la clase define
+            // actions() más abajo, sin importar si va a tener botones o no
+            // para este usuario.
+            Column::action('Action'),
         ];
     }
 
@@ -314,7 +310,7 @@ final class LicenciasTabla extends PowerGridComponent
             $titulo = $cancelada ? 'Reactivar' : 'Activar';
 
             $botones[] = Button::add('activar')
-                ->slot(Blade::render('<span title="' . $titulo . '"><flux:icon.check-circle class="size-4" /></span>'))
+                ->slot(Blade::render('<span title="'.$titulo.'"><flux:icon.check-circle class="size-4" /></span>'))
                 ->id()
                 ->class('pg-btn-white text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950')
                 ->dispatch('activar', ['rowId' => $row->id]);

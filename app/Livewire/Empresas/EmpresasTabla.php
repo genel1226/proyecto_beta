@@ -81,28 +81,11 @@ final class EmpresasTabla extends PowerGridComponent
                 );
             })
 
-            // Tipo de cuenta: demo (con o sin la prueba vencida), con licencia, o sin licencia
-            ->add('licencia_badge', function (Empresa $model) {
-                [$label, $color] = match (true) {
-                    $model->trial_ends_at !== null && $model->trial_ends_at->isPast() => ['Demo vencida', 'rose'],
-                    $model->trial_ends_at !== null => ['Demo hasta '.$model->trial_ends_at->format('d/m/Y'), 'violet'],
-                    $model->con_licencia === '1' => ['Con licencia', 'green'],
-                    default => ['Sin licencia', 'zinc'],
-                };
-
-                return Blade::render(
-                    '<flux:badge color="{{ $color }}" size="sm">{{ $label }}</flux:badge>',
-                    ['color' => $color, 'label' => $label]
-                );
-            })
-
             ->add('created_at_formatted', fn (Empresa $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
     }
 
     public function columns(): array
     {
-        $hayAcciones = Gate::allows('empresas.edit') || Gate::allows('empresas.desactivar');
-
         return [
             // Column::make('Id', 'id'),
 
@@ -142,15 +125,18 @@ final class EmpresasTabla extends PowerGridComponent
             //     ->sortable()
             //     ->searchable(),
 
-            Column::make('Licencia', 'licencia_badge'),
-
             Column::make('Estado', 'estado_badge', 'active')
                 ->sortable(),
 
             // Column::make('Created at', 'created_at_formatted', 'created_at')
             //     ->sortable(),
 
-            ...($hayAcciones ? [Column::action('Acciones')] : []),
+            // La columna de acciones SIEMPRE se declara: si el método actions()
+            // existe en la clase (más abajo), PowerGrid exige que columns()
+            // tenga Column::action(), sin importar si va a mostrar botones o
+            // no. Lo que sí varía por permiso es qué botones aparecen DENTRO
+            // (eso ya lo resuelve actions() con sus Gate::allows()).
+            Column::action('Acciones'),
         ];
     }
 

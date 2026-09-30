@@ -40,17 +40,18 @@
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <flux:input label="Razón social *" wire:model.blur="razon_social"
+                        <flux:input label="Razón social *" wire:model.live.debounce.500ms="razon_social"
                             placeholder="Nombre legal de la empresa" />
 
-                        <flux:input label="Nombre comercial *" wire:model.blur="nombre_comercial"
+                        <flux:input label="Nombre comercial *" wire:model.live.debounce.500ms="nombre_comercial"
                             placeholder="Nombre con el que se conoce" />
 
-                        <flux:input label="NIT *" wire:model.blur="nit" placeholder="Número de identificación" />
+                        <flux:input label="NIT *" wire:model.live.debounce.500ms="nit" placeholder="Número de identificación" />
 
                         {{-- País: lista completa con buscador. .live: el botón de guardar
                              depende de este campo, así que necesita avisar al instante --}}
-                        <flux:select wire:model.live="pais" label="País *" placeholder="Selecciona un país...">
+                        <flux:select wire:model.live="pais" label="País *"
+                            placeholder="Selecciona un país...">
                             <x-slot name="search">
                                 {{-- <flux:select.search class="px-4" placeholder="Buscar país..." /> --}}
                             </x-slot>
@@ -60,19 +61,19 @@
                             @endforeach
                         </flux:select>
 
-                        <flux:input label="Correo electrónico *" type="email" wire:model.blur="email"
+                        <flux:input label="Correo electrónico *" type="email" wire:model.live.debounce.500ms="email"
                             placeholder="contacto@empresa.com"
                             description="A este correo llegan las alertas de vencimiento." />
 
-                        <flux:input label="Teléfono" wire:model.blur="telefono" placeholder="Opcional" />
+                        <flux:input label="Teléfono" wire:model.live.debounce.500ms="telefono" placeholder="Opcional" />
 
                         <div class="sm:col-span-2">
-                            <flux:input label="Página web" wire:model.blur="pagina_web"
+                            <flux:input label="Página web" wire:model.live.debounce.500ms="pagina_web"
                                 placeholder="www.empresa.com (opcional)" />
                         </div>
 
                         <div class="sm:col-span-2">
-                            <flux:textarea label="Dirección" wire:model.blur="direccion" rows="2"
+                            <flux:textarea label="Dirección" wire:model.live.debounce.500ms="direccion" rows="2"
                                 placeholder="Opcional" />
                         </div>
 

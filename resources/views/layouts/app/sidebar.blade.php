@@ -43,6 +43,22 @@
                         {{ __('Pagos') }}
                     </flux:sidebar.item>
                 @endcan
+
+                {{-- Reportes --}}
+                @can('reportes.index')
+                    <flux:sidebar.item icon="chart-bar" :href="route('reportes')" :current="request()->routeIs('reportes')"
+                        wire:navigate>
+                        {{ __('Reportes') }}
+                    </flux:sidebar.item>
+                @endcan
+
+                {{-- Permisos --}}
+                @can('permisos.admin')
+                    <flux:sidebar.item icon="key" :href="route('permisos')" :current="request()->routeIs('permisos')"
+                        wire:navigate>
+                        {{ __('Permisos') }}
+                    </flux:sidebar.item>
+                @endcan
             </flux:sidebar.group>
         </flux:sidebar.nav>
 
