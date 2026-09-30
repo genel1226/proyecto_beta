@@ -58,7 +58,7 @@ final class LicenciasTabla extends PowerGridComponent
         return Licencia::query()
             ->with(['empresa', 'plan'])
             ->withCount([
-                'pagos as renovaciones_count' => fn ($q) => $q->whereNotNull('fecha_vencimiento_anterior'),
+                'pagos as renovaciones_count' => fn($q) => $q->whereNotNull('fecha_vencimiento_anterior'),
             ]);
     }
 
@@ -81,17 +81,17 @@ final class LicenciasTabla extends PowerGridComponent
             ->add('empresa_id')
             ->add('plan_id')
             ->add('codigo_licencia')
-            ->add('codigo_licencia_lower', fn (Licencia $model) => strtolower(e($model->codigo_licencia)))
+            ->add('codigo_licencia_lower', fn(Licencia $model) => strtolower(e($model->codigo_licencia)))
 
             // Nombre de empresa y plan, en vez del id crudo
-            ->add('empresa_nombre', fn (Licencia $model) => e($model->empresa?->razon_social ?? '—'))
-            ->add('plan_nombre', fn (Licencia $model) => e($model->plan?->nombre ?? '—'))
+            ->add('empresa_nombre', fn(Licencia $model) => e($model->empresa?->razon_social ?? '—'))
+            ->add('plan_nombre', fn(Licencia $model) => e($model->plan?->nombre ?? '—'))
 
-            ->add('fecha_inicio_formatted', fn (Licencia $model) => Carbon::parse($model->fecha_inicio)->format('d/m/Y'))
-            ->add('fecha_vencimiento_formatted', fn (Licencia $model) => Carbon::parse($model->fecha_vencimiento)->format('d/m/Y'))
+            ->add('fecha_inicio_formatted', fn(Licencia $model) => Carbon::parse($model->fecha_inicio)->format('d/m/Y'))
+            ->add('fecha_vencimiento_formatted', fn(Licencia $model) => Carbon::parse($model->fecha_vencimiento)->format('d/m/Y'))
 
             // Periodicidad legible en vez del char crudo (M/A/P)
-            ->add('periodicidad_formatted', fn (Licencia $model) => match ($model->periodicidad) {
+            ->add('periodicidad_formatted', fn(Licencia $model) => match ($model->periodicidad) {
                 'M' => 'Mensual',
                 'A' => 'Anual',
                 'P' => 'Personalizada',
@@ -142,7 +142,7 @@ final class LicenciasTabla extends PowerGridComponent
             })
 
             ->add('observaciones')
-            ->add('created_at_formatted', fn (Licencia $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
+            ->add('created_at_formatted', fn(Licencia $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
     }
 
     /**
@@ -243,6 +243,12 @@ final class LicenciasTabla extends PowerGridComponent
         $this->dispatch('editar-licencia', id: $rowId);
     }
 
+    #[On('ver-pagos')]
+    public function verPagos($rowId): void
+    {
+        $this->dispatch('ver-pagos-licencia', id: $rowId);
+    }
+
     #[On('renovar')]
     public function renovar($rowId): void
     {
@@ -278,6 +284,16 @@ final class LicenciasTabla extends PowerGridComponent
         $enProceso = $row->estado === 'P';
         $cancelada = $row->estado === 'C';
 
+        // Ver pagos no depende del estado: hasta una licencia Vencida o
+        // Cancelada puede necesitar consultarse su historial.
+        if (Gate::allows('pagos.index')) {
+            $botones[] = Button::add('ver-pagos')
+                ->slot(Blade::render('<span title="Ver pagos"><flux:icon.banknotes class="size-4" /></span>'))
+                ->id()
+                ->class('pg-btn-white text-zinc-600 border-zinc-300 hover:bg-zinc-50 dark:text-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-800')
+                ->dispatch('ver-pagos', ['rowId' => $row->id]);
+        }
+
         if (($vigente || $enProceso) && Gate::allows('licenses.edit')) {
             $botones[] = Button::add('edit')
                 ->slot(Blade::render('<span title="Editar"><flux:icon.pencil-square class="size-4" /></span>'))
@@ -298,7 +314,7 @@ final class LicenciasTabla extends PowerGridComponent
             $titulo = $cancelada ? 'Reactivar' : 'Activar';
 
             $botones[] = Button::add('activar')
-                ->slot(Blade::render('<span title="'.$titulo.'"><flux:icon.check-circle class="size-4" /></span>'))
+                ->slot(Blade::render('<span title="' . $titulo . '"><flux:icon.check-circle class="size-4" /></span>'))
                 ->id()
                 ->class('pg-btn-white text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950')
                 ->dispatch('activar', ['rowId' => $row->id]);

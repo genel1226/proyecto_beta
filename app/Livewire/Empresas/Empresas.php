@@ -72,6 +72,36 @@ class Empresas extends Component
         Gate::authorize('empresas.index');
     }
 
+    /**
+     * Validación en tiempo real: se dispara cada vez que un campo con
+     * wire:model.live/.blur cambia (ver el blade). Solo valida ESE campo,
+     * no el formulario completo, para que el error aparezca al momento
+     * sin esperar a "Guardar".
+     */
+    public function updated(string $property): void
+    {
+        if (array_key_exists($property, $this->rules())) {
+            $this->validateOnly($property);
+        }
+    }
+
+    /**
+     * Nada de esto reemplaza la validación de guardar() (que sigue
+     * revisando TODO antes de tocar la base de datos) — esto solo
+     * decide si el botón se deja presionar o no.
+     */
+    public function getPuedeGuardarProperty(): bool
+    {
+        $completos = trim($this->razon_social) !== ''
+            && trim($this->nombre_comercial) !== ''
+            && trim($this->nit) !== ''
+            && trim($this->email) !== ''
+            && trim($this->pais) !== ''
+            && (! $this->es_demo || $this->demo_hasta !== '');
+
+        return $completos && $this->getErrorBag()->isEmpty();
+    }
+
     protected function rules(): array
     {
         return [
@@ -123,8 +153,18 @@ class Empresas extends Component
     public function nuevo(): void
     {
         $this->reset([
-            'empresa_id', 'codigo_actual', 'razon_social', 'nombre_comercial', 'nit',
-            'email', 'pais', 'telefono', 'pagina_web', 'direccion', 'es_demo', 'demo_hasta',
+            'empresa_id',
+            'codigo_actual',
+            'razon_social',
+            'nombre_comercial',
+            'nit',
+            'email',
+            'pais',
+            'telefono',
+            'pagina_web',
+            'direccion',
+            'es_demo',
+            'demo_hasta',
         ]);
         $this->resetErrorBag();
     }
@@ -197,7 +237,7 @@ class Empresas extends Component
 
     private function formatearCodigo(int $numero): string
     {
-        return 'E'.str_pad((string) $numero, 3, '0', STR_PAD_LEFT);
+        return 'E' . str_pad((string) $numero, 3, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -240,7 +280,7 @@ class Empresas extends Component
 
         // Los opcionales vacíos se guardan como NULL, no como texto vacío.
         $datos = array_map(
-            fn ($valor) => $valor === '' ? null : $valor,
+            fn($valor) => $valor === '' ? null : $valor,
             Arr::except($validados, ['es_demo', 'demo_hasta'])
         );
 
@@ -374,7 +414,7 @@ class Empresas extends Component
 
         Flux::toast(
             heading: $activar ? 'Empresa reactivada' : 'Empresa desactivada',
-            text: 'La empresa '.$empresa->cod.($activar ? ' se reactivó' : ' se desactivó').' correctamente.',
+            text: 'La empresa ' . $empresa->cod . ($activar ? ' se reactivó' : ' se desactivó') . ' correctamente.',
             variant: 'success',
         );
     }

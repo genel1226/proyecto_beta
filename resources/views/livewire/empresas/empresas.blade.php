@@ -40,17 +40,17 @@
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <flux:input label="Razón social *" wire:model="razon_social"
+                        <flux:input label="Razón social *" wire:model.blur="razon_social"
                             placeholder="Nombre legal de la empresa" />
 
-                        <flux:input label="Nombre comercial *" wire:model="nombre_comercial"
+                        <flux:input label="Nombre comercial *" wire:model.blur="nombre_comercial"
                             placeholder="Nombre con el que se conoce" />
 
-                        <flux:input label="NIT *" wire:model="nit" placeholder="Número de identificación" />
+                        <flux:input label="NIT *" wire:model.blur="nit" placeholder="Número de identificación" />
 
-                        {{-- País: lista completa con buscador --}}
-                        <flux:select  wire:model="pais" label="País *"
-                            placeholder="Selecciona un país...">
+                        {{-- País: lista completa con buscador. .live: el botón de guardar
+                             depende de este campo, así que necesita avisar al instante --}}
+                        <flux:select wire:model.live="pais" label="País *" placeholder="Selecciona un país...">
                             <x-slot name="search">
                                 {{-- <flux:select.search class="px-4" placeholder="Buscar país..." /> --}}
                             </x-slot>
@@ -60,19 +60,19 @@
                             @endforeach
                         </flux:select>
 
-                        <flux:input label="Correo electrónico *" type="email" wire:model="email"
+                        <flux:input label="Correo electrónico *" type="email" wire:model.blur="email"
                             placeholder="contacto@empresa.com"
                             description="A este correo llegan las alertas de vencimiento." />
 
-                        <flux:input label="Teléfono" wire:model="telefono" placeholder="Opcional" />
+                        <flux:input label="Teléfono" wire:model.blur="telefono" placeholder="Opcional" />
 
                         <div class="sm:col-span-2">
-                            <flux:input label="Página web" wire:model="pagina_web"
+                            <flux:input label="Página web" wire:model.blur="pagina_web"
                                 placeholder="www.empresa.com (opcional)" />
                         </div>
 
                         <div class="sm:col-span-2">
-                            <flux:textarea label="Dirección" wire:model="direccion" rows="2"
+                            <flux:textarea label="Dirección" wire:model.blur="direccion" rows="2"
                                 placeholder="Opcional" />
                         </div>
 
@@ -82,7 +82,7 @@
                                 description="Empresa de prueba: todavía no tiene licencia. Al crearle su primera licencia Vigente deja de ser demo." />
 
                             @if ($es_demo)
-                                <flux:input type="date" label="Fin de la prueba *" wire:model="demo_hasta" />
+                                <flux:input type="date" label="Fin de la prueba *" wire:model.live="demo_hasta" />
                             @endif
 
                             @error('es_demo')
@@ -94,7 +94,8 @@
                     <div class="flex items-center">
                         <flux:text class="text-xs">* Campos obligatorios</flux:text>
                         <flux:spacer />
-                        <flux:button type="button" wire:click="guardar" variant="primary">
+                        <flux:button type="button" wire:click="guardar" variant="primary"
+                            :disabled="! $this->puedeGuardar">
                             {{ $empresa_id ? 'Guardar cambios' : 'Guardar empresa' }}
                         </flux:button>
                     </div>
