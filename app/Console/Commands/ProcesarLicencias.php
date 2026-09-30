@@ -112,6 +112,7 @@ class ProcesarLicencias extends Command
             foreach ($licencias as $licencia) {
                 $this->info("Aviso a {$dias} día(s): {$licencia->codigo_licencia}");
                 $this->enviar($licencia, 'por_vencer', (int) $dias);
+                sleep(11); // Mailtrap free: máximo 1 correo cada 10 segundos
             }
         }
     }
