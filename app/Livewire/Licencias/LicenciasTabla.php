@@ -153,11 +153,6 @@ final class LicenciasTabla extends PowerGridComponent
      */
     public function columns(): array
     {
-        $hayAcciones = Gate::allows('licenses.edit')
-            || Gate::allows('licenses.renovar')
-            || Gate::allows('licenses.activar')
-            || Gate::allows('licenses.baja');
-
         return [
             // Column::make('Id', 'id'),
 
@@ -210,9 +205,10 @@ final class LicenciasTabla extends PowerGridComponent
             // Column::make('Created at', 'created_at_formatted', 'created_at')
             //     ->sortable(),
 
-            ...$this->cuando($hayAcciones, [
-                Column::action('Action'),
-            ]),
+            // Siempre declarada: PowerGrid la exige porque la clase define
+            // actions() más abajo, sin importar si va a tener botones o no
+            // para este usuario.
+            Column::action('Action'),
         ];
     }
 
@@ -241,6 +237,12 @@ final class LicenciasTabla extends PowerGridComponent
     public function edit($rowId): void
     {
         $this->dispatch('editar-licencia', id: $rowId);
+    }
+
+    #[On('ver-pagos')]
+    public function verPagos($rowId): void
+    {
+        $this->dispatch('ver-pagos-licencia', id: $rowId);
     }
 
     #[On('renovar')]
@@ -277,6 +279,16 @@ final class LicenciasTabla extends PowerGridComponent
         $vigente = in_array($row->estado, ['V', 'X'], true);
         $enProceso = $row->estado === 'P';
         $cancelada = $row->estado === 'C';
+
+        // Ver pagos no depende del estado: hasta una licencia Vencida o
+        // Cancelada puede necesitar consultarse su historial.
+        if (Gate::allows('pagos.index')) {
+            $botones[] = Button::add('ver-pagos')
+                ->slot(Blade::render('<span title="Ver pagos"><flux:icon.banknotes class="size-4" /></span>'))
+                ->id()
+                ->class('pg-btn-white text-zinc-600 border-zinc-300 hover:bg-zinc-50 dark:text-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-800')
+                ->dispatch('ver-pagos', ['rowId' => $row->id]);
+        }
 
         if (($vigente || $enProceso) && Gate::allows('licenses.edit')) {
             $botones[] = Button::add('edit')

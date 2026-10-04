@@ -25,11 +25,20 @@
                         </flux:heading>
                     </div>
 
+                    {{-- Solo aparece editando una licencia ya existente --}}
+                    @can('pagos.index')
+                        @if ($licencia_id)
+                            <flux:button size="sm" variant="ghost" icon="banknotes"
+                                wire:click="verPagos({{ $licencia_id }})">
+                                Ver historial de pagos
+                            </flux:button>
+                        @endif
+                    @endcan
+
                     <flux:separator />
 
                     {{-- Si el usuario no puede ver nada del resumen, el formulario ocupa todo el ancho --}}
-                    <div
-                        class="grid grid-cols-1 {{ $verResumen ? 'lg:grid-cols-[1fr_320px]' : '' }} gap-6 items-start">
+                    <div class="grid grid-cols-1 {{ $verResumen ? 'lg:grid-cols-[1fr_320px]' : '' }} gap-6 items-start">
                         {{-- Columna izquierda: el formulario --}}
                         <div class="space-y-6">
 
@@ -46,15 +55,15 @@
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
-                                <flux:select wire:model="empresa_id" label="Empresa" :disabled="(bool) $licencia_id"
-                                    placeholder="Selecciona una empresa...">
+                                <flux:select wire:model.live="empresa_id" label="Empresa"
+                                    :disabled="(bool) $licencia_id" placeholder="Selecciona una empresa...">
                                     @foreach ($empresas as $empresa)
                                         <flux:select.option value="{{ $empresa->id }}">{{ $empresa->razon_social }}
                                         </flux:select.option>
                                     @endforeach
                                 </flux:select>
 
-                                <flux:select wire:model="periodicidad" label="Periodo">
+                                <flux:select wire:model.live="periodicidad" label="Periodo">
                                     <flux:select.option value="M">Mensual</flux:select.option>
                                     <flux:select.option value="A">Anual</flux:select.option>
                                     <flux:select.option value="P">Personalizada</flux:select.option>
@@ -65,7 +74,7 @@
                                 {{-- El mínimo de "hoy" solo aplica al crear; al editar la fecha de inicio ya puede ser pasada --}}
                                 <flux:input label="Fecha de inicio" type="date" wire:model.live="start_date"
                                     :min="$licencia_id ? null : now()->format('Y-m-d')" />
-                                <flux:input label="Fecha de vencimiento" type="date" wire:model="end_date"
+                                <flux:input label="Fecha de vencimiento" type="date" wire:model.live="end_date"
                                     :min="$this->minEndDate" />
                             </div>
 
@@ -161,8 +170,9 @@
                                 <flux:input label="Descuento (USD)" type="number" min="0" step="1"
                                     wire:model.live="descuento" :disabled="!$aplicarDescuento"
                                     :description="$aplicarDescuento
-                                        ? 'Único monto que edita el vendedor directamente.'
-                                        : 'Solo lectura: no tienes permiso para aplicar descuentos.'" />
+                                        ?
+                                        'Único monto que edita el vendedor directamente.' :
+                                        'Solo lectura: no tienes permiso para aplicar descuentos.'" />
                             @endif
 
                             @if ($verObservaciones)
@@ -231,7 +241,8 @@
 
                     <div class="flex">
                         <flux:spacer />
-                        <flux:button type="button" wire:click="guardar" variant="primary">
+                        <flux:button type="button" wire:click="guardar" variant="primary"
+                            :disabled="! $this->puedeGuardar">
                             {{ $licencia_id ? 'Guardar cambios' : 'Guardar licencia' }}
                         </flux:button>
                     </div>
@@ -334,7 +345,80 @@
         </div>
     </flux:modal>
 
+    {{-- ===== Historial de pagos (desde la tabla o desde "Editar") ===== --}}
+    <flux:modal name="ver-pagos" class="min-w-[28rem] max-w-[32rem]">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">Historial de pagos</flux:heading>
+                <flux:text class="mt-1">Licencia <strong>{{ $pagos_codigo }}</strong></flux:text>
+            </div>
+
+            @if (empty($historialPagos))
+                <flux:text class="text-zinc-500">Esta licencia todavía no tiene pagos registrados.</flux:text>
+            @else
+                <div
+                    class="border border-zinc-200 dark:border-zinc-700 rounded-lg divide-y divide-zinc-200 dark:divide-zinc-700 max-h-96 overflow-y-auto">
+                    @foreach ($historialPagos as $pago)
+                        <div class="flex items-center justify-between gap-4 px-4 py-3">
+                            <div>
+                                <div class="text-sm font-medium">{{ $pago['fecha_pago'] }}</div>
+                                <div class="text-xs text-zinc-500">
+                                    {{ $pago['tipo'] }}
+                                    @if ($pago['registrado_por'])
+                                        · registrado por {{ $pago['registrado_por'] }}
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="font-semibold tabular-nums">${{ number_format($pago['monto'], 2) }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
+            <div class="flex">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button variant="ghost">Cerrar</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- ===== Recibo: se muestra tras un pago real (venta nueva, activación o renovación) ===== --}}
+    <flux:modal name="recibo-pago" class="min-w-[24rem]" :dismissible="false">
+        @if ($recibo)
+            <div class="space-y-5 text-center">
+                <div class="flex justify-center">
+                    <div class="rounded-full bg-emerald-100 dark:bg-emerald-950/50 p-3">
+                        <flux:icon.check-circle class="size-10 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                </div>
+
+                <div>
+                    <flux:heading size="lg">¡Pago registrado!</flux:heading>
+                    <flux:text class="mt-1">{{ $recibo['tipo'] }} — {{ $recibo['empresa'] }}</flux:text>
+                </div>
+
+                <div class="text-4xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
+                    ${{ number_format($recibo['monto'], 2) }}
+                </div>
+
+                <div
+                    class="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 p-4 text-sm space-y-1.5 text-left">
+                    <div class="flex justify-between"><span class="text-zinc-500">Licencia</span><span
+                            class="font-medium">{{ $recibo['codigo'] }}</span></div>
+                    <div class="flex justify-between"><span class="text-zinc-500">Período</span><span
+                            class="font-medium tabular-nums">{{ $recibo['fecha_inicio'] }} →
+                            {{ $recibo['fecha_fin'] }}</span></div>
+                </div>
+
+                <flux:button variant="primary" class="w-full" wire:click="cerrarRecibo">Listo</flux:button>
+            </div>
+        @endif
+    </flux:modal>
+
     <flux:toast />
+
 
     <livewire:licencias.licencias-tabla />
 </div>

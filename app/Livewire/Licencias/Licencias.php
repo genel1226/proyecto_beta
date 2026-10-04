@@ -91,12 +91,123 @@ class Licencias extends Component
 
     public string $activar_codigo = '';
 
+    // ---- Modal de historial de pagos (se abre desde la tabla o desde edición) ----
+
+    #[Locked]
+    public ?int $pagos_licencia_id = null;
+
+    public string $pagos_codigo = '';
+
+    /** @var array<int, array{fecha_pago:string, monto:float, tipo:string, registrado_por:?string}> */
+    public array $historialPagos = [];
+
+    // ---- Recibo: se muestra después de un pago real (venta nueva, activación o renovación) ----
+
+    /** @var array{codigo:string, empresa:string, tipo:string, monto:float, fecha_inicio:string, fecha_fin:string}|null */
+    public ?array $recibo = null;
+
     public function mount(): void
     {
         Gate::authorize('licenses.index');
 
         $this->start_date = now()->format('Y-m-d');
         $this->cargarCantidades();
+    }
+
+    /**
+     * Reglas de validación. Se llama tanto desde guardar() como desde el
+     * hook de validación en vivo, para no duplicarlas en dos lugares.
+     * estado_inicial solo se valida al crear: en edición ese campo ni se
+     * muestra (el estado se cambia con "Dar de baja"/"Activar").
+     */
+    private function reglas(bool $editando): array
+    {
+        $reglas = [
+            'empresa_id' => ['required', 'exists:empresas,id'],
+            'plan_id' => ['required', 'exists:plans,id'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
+            'periodicidad' => ['required', 'in:M,A,P'],
+            'descuento' => ['nullable', 'numeric', 'min:0'],
+        ];
+
+        if (! $editando) {
+            $reglas['estado_inicial'] = ['required', 'in:V,P'];
+        }
+
+        return $reglas;
+    }
+
+    /**
+     * Validación en tiempo real: se dispara cada vez que un campo con
+     * wire:model.live/.blur cambia (ver el blade). Solo valida ESE campo.
+     * Si el usuario está editando, "estado_inicial" simplemente no está
+     * en las reglas de ese modo, así que aquí se ignora sin error.
+     */
+    public function updated(string $property): void
+    {
+        $reglas = $this->reglas($this->licencia_id !== null);
+
+        if (array_key_exists($property, $reglas)) {
+            $this->validateOnly($property, $reglas);
+        }
+    }
+
+    /**
+     * Se dispara solo con "Estado inicial" (Vigente/En proceso), porque
+     * decide si hace falta al menos un usuario. Actualiza el aviso de
+     * "detalle" al instante, sin esperar a "Guardar".
+     */
+    public function updatedEstadoInicial(): void
+    {
+        $this->refrescarErrorDetalle();
+    }
+
+    /**
+     * Quita (o deja) el error de "falta al menos un usuario" apenas
+     * cambia la cantidad o el estado — así el aviso desaparece en cuanto
+     * se corrige, sin que el usuario tenga que volver a apretar Guardar.
+     */
+    private function refrescarErrorDetalle(): void
+    {
+        if (! $this->getErrorBag()->has('detalle')) {
+            return;
+        }
+
+        $editando = $this->licencia_id !== null;
+        $estadoRelevante = $editando
+            ? ModelsLicencias::find($this->licencia_id)?->estado
+            : $this->estado_inicial;
+
+        $necesitaUsuarios = in_array($estadoRelevante, ['V', 'X'], true);
+        $tieneUsuarios = array_sum($this->cantidades) >= 1;
+
+        if (! $necesitaUsuarios || $tieneUsuarios) {
+            $this->resetErrorBag('detalle');
+        }
+    }
+
+    /**
+     * Nada de esto reemplaza la validación de guardar() (que revisa TODO,
+     * incluida la regla de "una sola licencia activa por empresa", antes
+     * de tocar la base de datos) — esto solo decide si el botón se deja
+     * presionar, para "impedir el avance" mientras falte algo básico.
+     */
+    public function getPuedeGuardarProperty(): bool
+    {
+        $editando = $this->licencia_id !== null;
+        $estadoRelevante = $editando
+            ? ModelsLicencias::find($this->licencia_id)?->estado
+            : $this->estado_inicial;
+
+        $basicosCompletos = $this->empresa_id
+            && $this->plan_id
+            && $this->start_date !== ''
+            && $this->end_date !== '';
+
+        $usuariosOk = ! in_array($estadoRelevante, ['V', 'X'], true) || array_sum($this->cantidades) >= 1;
+
+        return $basicosCompletos && $usuariosOk && $this->getErrorBag()->isEmpty();
     }
 
     /**
@@ -111,10 +222,10 @@ class Licencias extends Component
             : collect();
 
         $this->cantidades = TipoUsuario::query()
-            ->where(fn ($q) => $q->where('activo', 1)->orWhereIn('id', $enLicencia->keys()->all()))
+            ->where(fn($q) => $q->where('activo', 1)->orWhereIn('id', $enLicencia->keys()->all()))
             ->orderBy('id')
             ->pluck('id')
-            ->mapWithKeys(fn ($id) => [$id => (int) ($enLicencia[$id] ?? 0)])
+            ->mapWithKeys(fn($id) => [$id => (int) ($enLicencia[$id] ?? 0)])
             ->all();
     }
 
@@ -174,11 +285,79 @@ class Licencias extends Component
         $this->modal('nueva-licencia')->show();
     }
 
+    /**
+     * Abre el historial de pagos de una licencia. Sirve para las dos
+     * entradas: el botón de la tabla (evento reenviado) y el link dentro
+     * del propio formulario de edición (llamada directa).
+     */
+    #[On('ver-pagos-licencia')]
+    public function verPagos(int $id): void
+    {
+        if (! $this->autorizar('pagos.index')) {
+            return;
+        }
+
+        $licencia = ModelsLicencias::findOrFail($id);
+
+        $this->pagos_licencia_id = $licencia->id;
+        $this->pagos_codigo = (string) $licencia->codigo_licencia;
+
+        $this->historialPagos = $licencia->pagos()
+            ->with('registradoPor')
+            ->orderByDesc('fecha_pago')
+            ->get()
+            ->map(fn($pago) => [
+                'fecha_pago' => $pago->fecha_pago->format('d/m/Y H:i'),
+                'monto' => (float) $pago->monto,
+                // Sin fecha_vencimiento_anterior = fue el pago de la venta
+                // inicial (lo registra guardar()/activar()), no una renovación.
+                'tipo' => $pago->fecha_vencimiento_anterior ? 'Renovación' : 'Venta / activación',
+                'registrado_por' => $pago->registradoPor?->name,
+            ])
+            ->all();
+
+        $this->modal('ver-pagos')->show();
+    }
+
+    /**
+     * Arma y guarda el registro de pago inicial (venta nueva o activación
+     * desde "En proceso"), y prepara los datos para mostrar el recibo.
+     * No hace commit por su cuenta: se llama dentro de la transacción de
+     * quien la use.
+     */
+    private function registrarPagoInicial(ModelsLicencias $licencia, string $tipo): void
+    {
+        $licencia->pagos()->create([
+            'fecha_pago' => now(),
+            'monto' => $licencia->monto,
+            'fecha_vencimiento_anterior' => null,
+            'fecha_vencimiento_nueva' => $licencia->fecha_vencimiento,
+            'registrado_por' => Auth::id(),
+        ]);
+
+        $this->recibo = [
+            'codigo' => $licencia->codigo_licencia,
+            'empresa' => $licencia->empresa?->nombre_comercial ?? '—',
+            'tipo' => $tipo,
+            'monto' => (float) $licencia->monto,
+            'fecha_inicio' => $licencia->fecha_inicio->format('d/m/Y'),
+            'fecha_fin' => $licencia->fecha_vencimiento->format('d/m/Y'),
+        ];
+    }
+
+    public function cerrarRecibo(): void
+    {
+        $this->modal('recibo-pago')->close();
+        $this->recibo = null;
+    }
+
     public function incrementar(int $tipoId): void
     {
         if (array_key_exists($tipoId, $this->cantidades)) {
             $this->cantidades[$tipoId]++;
         }
+
+        $this->refrescarErrorDetalle();
     }
 
     public function decrementar(int $tipoId): void
@@ -186,6 +365,8 @@ class Licencias extends Component
         if (array_key_exists($tipoId, $this->cantidades) && $this->cantidades[$tipoId] > 0) {
             $this->cantidades[$tipoId]--;
         }
+
+        $this->refrescarErrorDetalle();
     }
 
     public function getMinEndDateProperty(): string
@@ -201,7 +382,7 @@ class Licencias extends Component
     {
         $siguienteId = (ModelsLicencias::max('id') ?? 0) + 1;
 
-        return 'L'.str_pad((string) $siguienteId, 4, '0', STR_PAD_LEFT);
+        return 'L' . str_pad((string) $siguienteId, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -225,10 +406,10 @@ class Licencias extends Component
             : collect();
 
         return TipoUsuario::query()
-            ->where(fn ($q) => $q->where('activo', 1)->orWhereIn('id', $aplicados->keys()->all()))
+            ->where(fn($q) => $q->where('activo', 1)->orWhereIn('id', $aplicados->keys()->all()))
             ->orderBy('id')
             ->get()
-            ->map(fn (TipoUsuario $tipo) => [
+            ->map(fn(TipoUsuario $tipo) => [
                 'id' => $tipo->id,
                 'codigo' => $tipo->codigo,
                 'nombre' => $tipo->nombre,
@@ -248,7 +429,7 @@ class Licencias extends Component
     {
         $plan = $this->plan_id ? Plan::find($this->plan_id) : null;
         $planMonto = (float) ($plan->monto ?? 0);
-        $subtotal = (float) collect($tipos)->sum(fn (array $t) => $t['cantidad'] * $t['precio']);
+        $subtotal = (float) collect($tipos)->sum(fn(array $t) => $t['cantidad'] * $t['precio']);
         $descuento = $this->descuentoEfectivo();
 
         return [
@@ -294,22 +475,7 @@ class Licencias extends Component
             return;
         }
 
-        $reglas = [
-            'empresa_id' => ['required', 'exists:empresas,id'],
-            'plan_id' => ['required', 'exists:plans,id'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after:start_date'],
-            'periodicidad' => ['required', 'in:M,A,P'],
-            'descuento' => ['nullable', 'numeric', 'min:0'],
-        ];
-
-        // En edición el estado no se toca aquí (ese campo ni se muestra),
-        // así que solo se valida al crear.
-        if (! $editando) {
-            $reglas['estado_inicial'] = ['required', 'in:V,P'];
-        }
-
-        $this->validate($reglas);
+        $this->validate($this->reglas($editando));
 
         $licenciaActual = $editando ? ModelsLicencias::findOrFail($this->licencia_id) : null;
 
@@ -341,7 +507,7 @@ class Licencias extends Component
 
         $otraActiva = ModelsLicencias::where('empresa_id', $empresaId)
             ->whereIn('estado', ['V', 'X', 'P'])
-            ->when($licenciaActual, fn ($q) => $q->where('id', '!=', $licenciaActual->id))
+            ->when($licenciaActual, fn($q) => $q->where('id', '!=', $licenciaActual->id))
             ->exists();
 
         if ($otraActiva) {
@@ -379,8 +545,14 @@ class Licencias extends Component
 
                 // El código real se asigna DESPUÉS del insert, con el id que
                 // MySQL ya le dio a esta fila: nunca puede chocar con otro.
-                $licencia->codigo_licencia = 'L'.str_pad((string) $licencia->id, 4, '0', STR_PAD_LEFT);
+                $licencia->codigo_licencia = 'L' . str_pad((string) $licencia->id, 4, '0', STR_PAD_LEFT);
                 $licencia->save();
+
+                // La venta nace Vigente: ya hay dinero de por medio, así que
+                // queda registrada como el primer pago de esta licencia.
+                if ($licencia->estado === 'V') {
+                    $this->registrarPagoInicial($licencia, 'Venta nueva');
+                }
             }
 
             // Sincroniza el detalle (igual al crear que al editar): guarda o
@@ -409,6 +581,10 @@ class Licencias extends Component
 
         $this->modal('nueva-licencia')->close();
         $this->dispatch('licencia-creada');
+
+        if ($this->recibo) {
+            $this->modal('recibo-pago')->show();
+        }
 
         $this->nuevo();
     }
@@ -468,7 +644,7 @@ class Licencias extends Component
         // Personalizada: no hay forma de calcular el período, se pide la fecha.
         if ($licencia->periodicidad === 'P') {
             $this->validate(
-                ['renovar_hasta' => ['required', 'date', 'after:'.$licencia->fecha_vencimiento->toDateString()]],
+                ['renovar_hasta' => ['required', 'date', 'after:' . $licencia->fecha_vencimiento->toDateString()]],
                 [
                     'required' => 'Indica hasta cuándo se renueva.',
                     'date' => 'Escribe una fecha válida.',
@@ -495,18 +671,20 @@ class Licencias extends Component
             ]);
 
             AccesoEmpresa::otorgar($licencia);
-        });
 
-        $codigo = $this->renovar_codigo;
+            $this->recibo = [
+                'codigo' => $licencia->codigo_licencia,
+                'empresa' => $licencia->empresa?->nombre_comercial ?? '—',
+                'tipo' => 'Renovación',
+                'monto' => (float) $licencia->monto,
+                'fecha_inicio' => $inicio->format('d/m/Y'),
+                'fecha_fin' => $fin?->format('d/m/Y') ?? '—',
+            ];
+        });
 
         $this->cerrarRenovacion();
         $this->dispatch('licencia-creada');
-
-        Flux::toast(
-            heading: 'Licencia renovada',
-            text: "La licencia {$codigo} se renovó hasta el {$fin->format('d/m/Y')}.",
-            variant: 'success',
-        );
+        $this->modal('recibo-pago')->show();
     }
 
     private function motivoNoRenovable(ModelsLicencias $licencia): ?string
@@ -603,13 +781,26 @@ class Licencias extends Component
         $reactivada = $this->activar_reactivar;
         $codigo = $this->activar_codigo;
 
-        DB::transaction(function () use ($licencia) {
+        DB::transaction(function () use ($licencia, $reactivada) {
             $licencia->update(['estado' => 'V']);
             AccesoEmpresa::otorgar($licencia);
+
+            // Activar desde "En proceso" es cuando se cierra la venta: ahí
+            // sí hay un primer pago real. Reactivar desde Cancelada NO
+            // registra pago por ahora (a confirmar con el negocio).
+            if (! $reactivada) {
+                $this->registrarPagoInicial($licencia, 'Activación');
+            }
         });
 
         $this->cerrarActivacion();
         $this->dispatch('licencia-creada');
+
+        if ($this->recibo) {
+            $this->modal('recibo-pago')->show();
+
+            return;
+        }
 
         Flux::toast(
             heading: $reactivada ? 'Licencia reactivada' : 'Licencia activada',
