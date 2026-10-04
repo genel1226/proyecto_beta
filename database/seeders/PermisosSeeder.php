@@ -69,6 +69,7 @@ class PermisosSeeder extends Seeder
                 ['tipos_usuario.index', '1', 'Ver el catálogo de tipos de usuario y sus precios', 'View the user types catalog'],
                 ['tipos_usuario.create', '2', 'Crear tipos de usuario', 'Create user types'],
                 ['tipos_usuario.edit', '2', 'Editar tipos de usuario y sus precios', 'Edit user types and prices'],
+                ['tipos_usuario.desactivar', '2', 'Desactivar y reactivar tipos de usuario', 'Deactivate and reactivate user types'],
             ],
         ],
 
