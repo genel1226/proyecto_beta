@@ -96,8 +96,11 @@ final class PagosTabla extends PowerGridComponent
 
             Column::make('Tipo', 'tipo_badge'),
 
-            Column::make('Monto', 'monto')
-                ->sortable(),
+            // El monto es un dato delicado: solo lo ve quien tiene el permiso de montos de reportes
+            // (el Auditor, por ejemplo, ve los pagos pero no cuánto fueron).
+            ...(Gate::allows('reportes.montos')
+                ? [Column::make('Monto', 'monto')->sortable()]
+                : []),
 
             Column::make('Vence ahora', 'fecha_vencimiento_nueva_formatted', 'fecha_vencimiento_nueva')
                 ->sortable(),

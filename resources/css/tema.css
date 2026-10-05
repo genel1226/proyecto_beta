@@ -1,0 +1,303 @@
+/*
+ * ============================================================================
+ *  TEMA VISUAL: menú y encabezado flotantes, franja violeta y tarjetas.
+ *
+ *  Todo el aspecto nuevo vive en ESTE archivo. Para volver al estilo anterior
+ *  basta con quitar la línea  @import "./tema.css";  de app.css y recompilar.
+ * ============================================================================
+ */
+
+/* ---------- Variables (claro y oscuro) ---------- */
+:root {
+    --t-fondo: #f3f0fa;
+    --t-tarjeta: #ffffff;
+    --t-borde: #ece7f6;
+    --t-sombra: 0 8px 24px rgba(45, 27, 88, 0.1);
+    --t-sombra-fuerte: 0 10px 30px rgba(45, 27, 88, 0.16);
+    --t-franja: linear-gradient(120deg, #4a3280 0%, #6d4aa8 55%, #9b7fd0 100%);
+    --t-activo: #ece6f8;
+    --t-icono-bg: #ece6f8;
+}
+
+:root.dark {
+    --t-fondo: #13101d;
+    --t-tarjeta: #1c1830;
+    --t-borde: #2c2647;
+    --t-sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --t-sombra-fuerte: 0 10px 30px rgba(0, 0, 0, 0.45);
+    --t-franja: linear-gradient(120deg, #1b1432 0%, #2d2257 55%, #46377f 100%);
+    --t-activo: rgba(162, 138, 216, 0.18);
+    --t-icono-bg: rgba(162, 138, 216, 0.16);
+}
+
+body {
+    background: var(--t-fondo);
+}
+
+/* ---------- Franja de color de fondo ----------
+   Va con position:absolute (fuera del flujo) porque la cuadrícula de Flux exige que el
+   encabezado esté justo después del menú lateral; un elemento normal en medio la rompería. */
+.fondo-franja {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 19rem;
+    background: var(--t-franja);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* El contenido va por encima de la franja */
+[data-flux-main] {
+    position: relative;
+    z-index: 1;
+}
+
+/* Modo inset de Flux (encabezado y menú fijos): quita la tarjeta blanca con borde que Flux le pone al contenido */
+[data-flux-main][data-flux-main-inset] {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+}
+
+/* ---------- Encabezado flotante ---------- */
+[data-flux-header] {
+    margin: 0.75rem 0.75rem 0;
+    padding-inline: 1rem;
+    min-height: 4rem;
+    background: var(--t-tarjeta);
+    border: 0;
+    border-radius: 1.1rem;
+    box-shadow: var(--t-sombra-fuerte);
+}
+
+/* ---------- Móvil: encabezado fijo arriba ----------
+   En pantallas chicas la página sí hace scroll completa, así que el encabezado se fija con position: fixed
+   y el contenido baja lo que mide el encabezado. */
+@media (max-width: 63.999rem) {
+    [data-flux-header] {
+        position: fixed;
+        top: 0.75rem;
+        left: 0.75rem;
+        right: 0.75rem;
+        margin: 0;
+        z-index: 10;
+    }
+
+    [data-flux-main] {
+        padding-top: 5.75rem;
+    }
+}
+
+/* ---------- Menú lateral flotante y contenido (solo escritorio) ---------- */
+@media (min-width: 64rem) {
+    [data-flux-sidebar] {
+        /* !important: Flux fija la posición y la altura con estilos en línea */
+        position: sticky !important;
+        top: 1rem !important;
+        align-self: start !important;
+        height: calc(100dvh - 2rem) !important;
+        max-height: calc(100dvh - 2rem) !important;
+
+        margin: 1rem 0 1rem 1rem;
+        background: var(--t-tarjeta);
+        border: 0;
+        border-radius: 1.25rem;
+        box-shadow: var(--t-sombra-fuerte);
+    }
+
+    [data-flux-header] {
+        margin: 1rem 1rem 0 1rem;
+    }
+
+    [data-flux-main] {
+        padding: 1.25rem 1rem 2rem 1rem;
+    }
+}
+
+/* Títulos de sección del menú ("Plataforma", "Administración"). Son propios y no un flux:sidebar.group porque
+   Flux oculta los grupos enteros al minimizar el menú (y los íconos se iban con ellos). Con el menú minimizado
+   (Flux le pone el atributo data-flux-sidebar-collapsed-desktop) el título se esconde y aparece una línea fina. */
+.menu-seccion {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+}
+
+.menu-seccion-2 {
+    margin-top: 1rem;
+}
+
+.menu-separador {
+    display: none;
+    height: 1px;
+    margin: 0.75rem 0.25rem;
+    background: var(--t-borde);
+}
+
+[data-flux-sidebar-collapsed-desktop] .menu-seccion {
+    display: none;
+}
+
+[data-flux-sidebar-collapsed-desktop] .menu-separador {
+    display: block;
+}
+
+/* Ítem activo del menú: fondo lila y texto en el color de acento */
+[data-flux-sidebar-item][data-current] {
+    background: var(--t-activo);
+    border-color: transparent;
+    color: var(--color-accent-content);
+    font-weight: 600;
+}
+
+/* ---------- Tarjetas ---------- */
+.tarjeta {
+    background: var(--t-tarjeta);
+    border-radius: 1rem;
+    box-shadow: var(--t-sombra);
+    padding: 1.25rem;
+}
+
+/* Tarjeta del título de cada página (ícono + título + botones) */
+.tarjeta-titulo {
+    background: var(--t-tarjeta);
+    border-radius: 1.1rem;
+    box-shadow: var(--t-sombra-fuerte);
+    padding: 0.9rem 1.4rem;
+}
+
+.titulo-icono {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 0.9rem;
+    background: var(--t-icono-bg);
+    color: var(--color-accent-content);
+}
+
+/* ---------- Tarjetas de indicadores: fondo suave + ícono en el color fuerte del mismo tono ----------
+   El color significa algo (igual que las etiquetas de estado): ámbar = por vencer, rosa = vencida,
+   azul = en proceso, verde = dinero. Violeta es el color de la marca. */
+.kpi {
+    --kpi-a: #f1ecfc;
+    --kpi-b: #e3d9f7;
+    --kpi-fuerte: #6d4aa8;
+    --kpi-texto: #4a3280;
+
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 0.875rem;
+    border-bottom: 3px solid var(--kpi-fuerte);
+    background: linear-gradient(135deg, var(--kpi-a), var(--kpi-b));
+    box-shadow: var(--t-sombra);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+a.kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--t-sombra-fuerte);
+}
+
+.kpi-icono {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 9999px;
+    color: #ffffff;
+    background: var(--kpi-fuerte);
+    box-shadow: 0 6px 12px rgba(31, 26, 51, 0.18);
+}
+
+.kpi-texto {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: grid;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.kpi-etiqueta {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--kpi-texto);
+}
+
+.kpi-valor {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #1f1a33;
+    font-variant-numeric: tabular-nums;
+}
+
+.kpi-nota {
+    font-size: 0.75rem;
+    color: var(--kpi-texto);
+}
+
+.kpi[data-tono="ambar"] { --kpi-a: #fff7de; --kpi-b: #ffedb5; --kpi-fuerte: #b36b00; --kpi-texto: #7a4f00; }
+.kpi[data-tono="rosa"] { --kpi-a: #ffeaf1; --kpi-b: #ffd5e4; --kpi-fuerte: #c0245f; --kpi-texto: #8f1b48; }
+.kpi[data-tono="azul"] { --kpi-a: #e9f2ff; --kpi-b: #d3e6ff; --kpi-fuerte: #2563c9; --kpi-texto: #1b4a9c; }
+.kpi[data-tono="turquesa"] { --kpi-a: #e2f8f5; --kpi-b: #c7efe9; --kpi-fuerte: #0f8f82; --kpi-texto: #0b6b61; }
+.kpi[data-tono="verde"] { --kpi-a: #e4f8ed; --kpi-b: #cdf0dd; --kpi-fuerte: #148a55; --kpi-texto: #0b6b4b; }
+
+/* Modo oscuro de las tarjetas de indicadores */
+:root.dark .kpi { --kpi-a: #2a2346; --kpi-b: #342b57; --kpi-fuerte: #7b5bbd; --kpi-texto: #d3c6f3; }
+:root.dark .kpi[data-tono="ambar"] { --kpi-a: #3a2f17; --kpi-b: #463818; --kpi-fuerte: #b87a14; --kpi-texto: #f3d896; }
+:root.dark .kpi[data-tono="rosa"] { --kpi-a: #3b1f2b; --kpi-b: #482536; --kpi-fuerte: #c2386b; --kpi-texto: #f5b9cf; }
+:root.dark .kpi[data-tono="azul"] { --kpi-a: #1d2b46; --kpi-b: #223552; --kpi-fuerte: #3b73d1; --kpi-texto: #bcd5fa; }
+:root.dark .kpi[data-tono="turquesa"] { --kpi-a: #17332f; --kpi-b: #1b3e39; --kpi-fuerte: #17998b; --kpi-texto: #a7e6df; }
+:root.dark .kpi[data-tono="verde"] { --kpi-a: #18342a; --kpi-b: #1c3f31; --kpi-fuerte: #1f9560; --kpi-texto: #b0e8c9; }
+:root.dark .kpi-valor { color: #f6f3ff; }
+
+/* ============================================================================
+   RED DE SEGURIDAD
+   Estas reglas consiguen lo mismo que los cambios hechos en las vistas (sidebar.blade.php y app.blade.php),
+   directamente desde el CSS. Así el aspecto no depende de que TODAS las vistas estén al día: si alguna quedó
+   sin actualizar o en caché, esto igual lo cubre. Si las vistas ya están bien, estas reglas no estorban.
+   ============================================================================ */
+
+@media (min-width: 64rem) {
+    /* Encabezado y menú fijos: solo se desplaza el contenido (equivale a <flux:main inset>) */
+    body:has(> [data-flux-main]) {
+        height: 100dvh;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    [data-flux-main] {
+        min-width: 0;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    /* El botón de minimizar de dentro del menú no se muestra en escritorio: para eso está la hamburguesa */
+    [data-flux-sidebar-collapse] {
+        display: none !important;
+    }
+}
+
+/* Con el menú minimizado Flux esconde los grupos enteros (y los íconos se van con ellos).
+   Se fuerzan visibles y se esconde solo el título del grupo. */
+[data-flux-sidebar-collapsed-desktop] [data-flux-sidebar-group] {
+    display: flex !important;
+}
+
+[data-flux-sidebar-collapsed-desktop] [data-flux-sidebar-group] > div.truncate:first-child {
+    display: none;
+}

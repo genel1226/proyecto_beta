@@ -1,18 +1,11 @@
 <div>
-    <div class="flex flex-wrap justify-between gap-2 py-6 bg-zinc-100 px-3 my-5 dark:bg-zinc-800">
-        <div class="order-first flex text-4xl font-bold items-center gap-2 text-zinc-700 dark:text-zinc-200">
-            <flux:icon.users class="size-12" />
-            Usuarios
-        </div>
-
-        <div class="order-last">
-            @can('usuarios.create')
-                <flux:modal.trigger name="usuario-form">
-                    <flux:button icon="plus" variant="primary" wire:click="nuevo">Nuevo usuario</flux:button>
-                </flux:modal.trigger>
-            @endcan
-        </div>
-    </div>
+    <x-pagina-titulo icono="users" titulo="Usuarios">
+        @can('usuarios.create')
+            <flux:modal.trigger name="usuario-form">
+                <flux:button icon="plus" variant="primary" wire:click="nuevo">Nuevo usuario</flux:button>
+            </flux:modal.trigger>
+        @endcan
+    </x-pagina-titulo>
 
     {{-- ===== Crear / editar usuario ===== --}}
     <flux:modal name="usuario-form" class="max-w-[50vw]! lg:max-w-[620px]! w-full!">
@@ -161,5 +154,7 @@
         @endif
     </flux:modal>
 
-    <livewire:usuarios.usuarios-tabla />
+    <div class="tarjeta">
+        <livewire:usuarios.usuarios-tabla />
+    </div>
 </div>

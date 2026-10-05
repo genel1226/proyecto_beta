@@ -1,18 +1,11 @@
 <div>
-    <div class="flex flex-wrap justify-between gap-2 py-6 bg-zinc-100 px-3 my-5 dark:bg-zinc-800">
-        <div class="order-first flex text-4xl font-bold items-center gap-2 text-zinc-700 dark:text-zinc-200">
-            <flux:icon.shield-check class="size-12" />
-            Roles
-        </div>
-
-        <div class="order-last">
-            @can('roles.create')
-                <flux:modal.trigger name="rol-form">
-                    <flux:button icon="plus" variant="primary" wire:click="nuevoRol">Nuevo rol</flux:button>
-                </flux:modal.trigger>
-            @endcan
-        </div>
-    </div>
+    <x-pagina-titulo icono="shield-check" titulo="Roles">
+        @can('roles.create')
+            <flux:modal.trigger name="rol-form">
+                <flux:button icon="plus" variant="primary" wire:click="nuevoRol">Nuevo rol</flux:button>
+            </flux:modal.trigger>
+        @endcan
+    </x-pagina-titulo>
 
     {{-- ===== Crear / editar el nombre y la descripción de un rol ===== --}}
     <flux:modal name="rol-form" class="max-w-[50vw]! lg:max-w-[520px]! w-full!">
@@ -45,7 +38,7 @@
     </flux:modal>
 
     {{-- ===== Selector de rol ===== --}}
-    <div class="mx-3 mb-6 border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 space-y-3">
+    <div class="tarjeta mb-6 space-y-3">
         <flux:select wire:model.live="rol_id" label="Rol a gestionar">
             @foreach ($roles as $r)
                 <flux:select.option value="{{ $r->id }}">{{ $r->name }}</flux:select.option>
@@ -85,11 +78,11 @@
 
     {{-- ===== Permisos del rol, por módulo ===== --}}
     @if ($rolActual)
-        <div class="mx-3 grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
             @foreach ($modulos as $modulo)
                 {{-- El wire:key lleva el rol: al cambiar de rol se dibujan switches nuevos, sin arrastrar el estado del anterior --}}
                 <div wire:key="rol-{{ $rol_id }}-modulo-{{ $modulo->id }}"
-                    class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+                    class="tarjeta">
                     <div class="flex items-center justify-between mb-3">
                         <flux:heading size="sm">{{ $modulo->description }}</flux:heading>
 
@@ -119,7 +112,7 @@
             @endforeach
         </div>
     @else
-        <flux:text class="mx-3 text-zinc-500">Todavía no hay roles. Corre el seeder de permisos para crear los básicos.
+        <flux:text class="text-zinc-500">Todavía no hay roles. Corre el seeder de permisos para crear los básicos.
         </flux:text>
     @endif
 </div>

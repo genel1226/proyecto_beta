@@ -1,13 +1,8 @@
 <div>
-    <div class="flex justify-between py-6 bg-zinc-100 px-3 my-5 dark:bg-zinc-800">
-        <div class="order-first flex text-4xl font-bold items-center gap-2 text-zinc-700 dark:text-zinc-200">
-            <flux:icon.chart-bar class="size-12" />
-            Reportes
-        </div>
-    </div>
+    <x-pagina-titulo icono="chart-bar" titulo="Reportes" />
 
     {{-- Filtros --}}
-    <div class="mx-3 mb-6 border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+    <div class="tarjeta mb-6">
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
             <flux:input type="date" label="Desde" wire:model.live="desde" />
             <flux:input type="date" label="Hasta" wire:model.live="hasta" />
@@ -32,41 +27,54 @@
         </div>
     </div>
 
-    {{-- KPIs --}}
-    <div class="mx-3 mb-8 grid grid-cols-2 sm:grid-cols-5 gap-4">
+    {{-- Indicadores: fondo suave e ícono en el color fuerte del mismo tono (el color significa algo: ámbar = por vencer, verde = dinero…) --}}
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         @can('reportes.montos')
-            <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    ${{ number_format($this->kpis['total_facturado'], 2) }}
-                </div>
-                <div class="text-xs text-zinc-500 mt-1">Facturado en el rango</div>
+            <div class="kpi" data-tono="verde">
+                <span class="kpi-icono"><flux:icon.banknotes class="size-6" /></span>
+                <span class="kpi-texto">
+                    <span class="kpi-etiqueta">Facturado en el rango</span>
+                    <span class="kpi-valor">${{ number_format($this->kpis['total_facturado'], 2) }}</span>
+                </span>
             </div>
         @endcan
 
-        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold tabular-nums">{{ $this->kpis['cantidad_pagos'] }}</div>
-            <div class="text-xs text-zinc-500 mt-1">Pagos en el rango</div>
+        <div class="kpi" data-tono="azul">
+            <span class="kpi-icono"><flux:icon.credit-card class="size-6" /></span>
+            <span class="kpi-texto">
+                <span class="kpi-etiqueta">Pagos en el rango</span>
+                <span class="kpi-valor">{{ $this->kpis['cantidad_pagos'] }}</span>
+            </span>
         </div>
 
-        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400">{{ $this->kpis['licencias_activas'] }}</div>
-            <div class="text-xs text-zinc-500 mt-1">Licencias activas hoy</div>
+        <div class="kpi" data-tono="violeta">
+            <span class="kpi-icono"><flux:icon.clipboard-document-list class="size-6" /></span>
+            <span class="kpi-texto">
+                <span class="kpi-etiqueta">Licencias activas hoy</span>
+                <span class="kpi-valor">{{ $this->kpis['licencias_activas'] }}</span>
+            </span>
         </div>
 
-        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{{ $this->kpis['por_vencer_15'] }}</div>
-            <div class="text-xs text-zinc-500 mt-1">Por vencer en 15 días</div>
+        <div class="kpi" data-tono="ambar">
+            <span class="kpi-icono"><flux:icon.clock class="size-6" /></span>
+            <span class="kpi-texto">
+                <span class="kpi-etiqueta">Por vencer en 15 días</span>
+                <span class="kpi-valor">{{ $this->kpis['por_vencer_15'] }}</span>
+            </span>
         </div>
 
-        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold tabular-nums">{{ $this->kpis['empresas_activas'] }}</div>
-            <div class="text-xs text-zinc-500 mt-1">Empresas activas</div>
+        <div class="kpi" data-tono="turquesa">
+            <span class="kpi-icono"><flux:icon.building-office class="size-6" /></span>
+            <span class="kpi-texto">
+                <span class="kpi-etiqueta">Empresas activas</span>
+                <span class="kpi-valor">{{ $this->kpis['empresas_activas'] }}</span>
+            </span>
         </div>
     </div>
 
-    <div class="mx-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {{-- Facturación por mes --}}
-        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+        <div class="tarjeta">
             <flux:heading size="sm" class="mb-3">Facturación por mes</flux:heading>
 
             <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -87,7 +95,7 @@
         </div>
 
         {{-- Top empresas --}}
-        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+        <div class="tarjeta">
             <flux:heading size="sm" class="mb-3">Top empresas por facturación</flux:heading>
 
             <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -108,7 +116,7 @@
         </div>
 
         {{-- Facturación por plan (producto) --}}
-        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+        <div class="tarjeta">
             <flux:heading size="sm" class="mb-3">Facturación por plan</flux:heading>
 
             <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -129,7 +137,7 @@
         </div>
 
         {{-- Licencias por estado --}}
-        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+        <div class="tarjeta">
             <flux:heading size="sm" class="mb-3">Licencias por estado (ahora mismo)</flux:heading>
 
             @php

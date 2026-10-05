@@ -1,58 +1,71 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
     @include('partials.head')
 </head>
 
-<body class="min-h-screen bg-white dark:bg-zinc-800">
-    {{-- sidebar --}}
-    <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+<body class="min-h-screen">
+    {{-- Franja de color de fondo. Está fuera del flujo (position: absolute) a propósito: la cuadrícula de
+         Flux necesita que el encabezado esté JUSTO después del menú lateral, y un elemento normal en
+         medio la rompería. --}}
+    <div class="fondo-franja" aria-hidden="true"></div>
+
+    {{-- Menú lateral: flotante y minimizable (el aspecto sale de tema.css; el botón de las tres rayitas
+         del encabezado lo minimiza) --}}
+    <flux:sidebar sticky collapsible>
         <flux:sidebar.header>
             <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+            {{-- Solo en móvil (cierra el menú). En escritorio el menú se minimiza con el botón de las tres
+                 rayitas del encabezado. --}}
             <flux:sidebar.collapse class="lg:hidden" />
         </flux:sidebar.header>
 
         <flux:sidebar.nav>
-            <flux:sidebar.group :heading="__('Platform')" class="grid">
-                <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')"
-                    wire:navigate>
-                    {{ __('Dashboard') }}
+            {{-- Los ítems van DIRECTO en el nav, sin flux:sidebar.group: Flux oculta por completo cualquier
+                 grupo cuando el menú está minimizado, y con él se iban los íconos. Los títulos de sección
+                 son propios (clase menu-seccion) y se esconden al minimizar; en su lugar aparece una línea
+                 fina (menu-separador). --}}
+            <div class="menu-seccion">{{ __('Platform') }}</div>
+
+            <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')"
+                wire:navigate>
+                {{ __('Dashboard') }}
+            </flux:sidebar.item>
+
+            @can('licenses.index')
+                <flux:sidebar.item icon="clipboard-document-list" :href="route('licencias')"
+                    :current="request()->routeIs('licencias')" wire:navigate>
+                    {{ __('Licencias') }}
                 </flux:sidebar.item>
+            @endcan
 
-                {{-- Licencias --}}
-                @can('licenses.index')
-                    <flux:sidebar.item icon="clipboard-document-list" :href="route('licencias')"
-                        :current="request()->routeIs('licencias')" wire:navigate>
-                        {{ __('Licencias') }}
-                    </flux:sidebar.item>
-                @endcan
+            @can('empresas.index')
+                <flux:sidebar.item icon="building-office" :href="route('empresas')" :current="request()->routeIs('empresas')"
+                    wire:navigate>
+                    {{ __('Empresas') }}
+                </flux:sidebar.item>
+            @endcan
 
-                {{-- Empresas --}}
-                @can('empresas.index')
-                    <flux:sidebar.item icon="building-office" :href="route('empresas')"
-                        :current="request()->routeIs('empresas')" wire:navigate>
-                        {{ __('Empresas') }}
-                    </flux:sidebar.item>
-                @endcan
+            @can('pagos.index')
+                <flux:sidebar.item icon="banknotes" :href="route('pagos')" :current="request()->routeIs('pagos')"
+                    wire:navigate>
+                    {{ __('Pagos') }}
+                </flux:sidebar.item>
+            @endcan
 
-                {{-- Pagos --}}
-                @can('pagos.index')
-                    <flux:sidebar.item icon="banknotes" :href="route('pagos')" :current="request()->routeIs('pagos')"
-                        wire:navigate>
-                        {{ __('Pagos') }}
-                    </flux:sidebar.item>
-                @endcan
+            @can('reportes.index')
+                <flux:sidebar.item icon="chart-bar" :href="route('reportes')" :current="request()->routeIs('reportes')"
+                    wire:navigate>
+                    {{ __('Reportes') }}
+                </flux:sidebar.item>
+            @endcan
 
-                {{-- Reportes --}}
-                @can('reportes.index')
-                    <flux:sidebar.item icon="chart-bar" :href="route('reportes')" :current="request()->routeIs('reportes')"
-                        wire:navigate>
-                        {{ __('Reportes') }}
-                    </flux:sidebar.item>
-                @endcan
+            {{-- Administración: solo aparece si el usuario puede ver al menos una de sus opciones --}}
+            @canany(['tipos_usuario.index', 'usuarios.index', 'roles.index'])
+                <div class="menu-seccion menu-seccion-2">Administración</div>
+                <div class="menu-separador"></div>
 
-                {{-- Tipos de usuario --}}
                 @can('tipos_usuario.index')
                     <flux:sidebar.item icon="user-group" :href="route('tipos-usuario')"
                         :current="request()->routeIs('tipos-usuario')" wire:navigate>
@@ -60,7 +73,6 @@
                     </flux:sidebar.item>
                 @endcan
 
-                {{-- Usuarios --}}
                 @can('usuarios.index')
                     <flux:sidebar.item icon="users" :href="route('usuarios')" :current="request()->routeIs('usuarios')"
                         wire:navigate>
@@ -68,14 +80,13 @@
                     </flux:sidebar.item>
                 @endcan
 
-                {{-- Roles --}}
                 @can('roles.index')
                     <flux:sidebar.item icon="shield-check" :href="route('roles')" :current="request()->routeIs('roles')"
                         wire:navigate>
                         {{ __('Roles') }}
                     </flux:sidebar.item>
                 @endcan
-            </flux:sidebar.group>
+            @endcanany
         </flux:sidebar.nav>
 
         <flux:spacer />
@@ -83,10 +94,14 @@
     </flux:sidebar>
 
     {{-- Header --}}
-    <flux:header class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-        <flux:sidebar.toggle class=" mr-2" icon="bars-3" inset="left" />
+    <flux:header class="max-lg:hidden">
+        <flux:sidebar.toggle class="mr-2" icon="bars-3" inset="left" />
 
         <flux:spacer />
+
+        {{-- Alternar modo claro / oscuro --}}
+        <flux:button x-data x-on:click="$flux.dark = ! $flux.dark" icon="moon" variant="subtle" square
+            aria-label="Cambiar entre modo claro y oscuro" class="mr-2" />
 
         <x-desktop-user-menu />
     </flux:header>

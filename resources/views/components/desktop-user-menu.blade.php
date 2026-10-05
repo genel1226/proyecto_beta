@@ -1,8 +1,10 @@
-<flux:dropdown position="bottom" align="start">
-    <flux:sidebar.profile
+@php($rolActual = \App\Services\RolesUsuario::rolDe((int) auth()->id()))
+
+<flux:dropdown position="bottom" align="end">
+    <flux:profile
         :name="auth()->user()->name"
         :initials="auth()->user()->initials()"
-        icon:trailing="chevrons-up-down"
+        icon-trailing="chevron-down"
         data-test="sidebar-menu-button"
     />
 
@@ -15,6 +17,9 @@
             <div class="grid flex-1 text-start text-sm leading-tight">
                 <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
                 <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
+                <flux:text class="truncate text-xs font-semibold text-accent-content">
+                    {{ $rolActual?->name ?? 'Sin rol' }}
+                </flux:text>
             </div>
         </div>
         <flux:menu.separator />

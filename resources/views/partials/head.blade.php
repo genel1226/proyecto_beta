@@ -12,4 +12,15 @@
 @fonts
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+{{-- Modo CLARO por defecto, solo la primera vez que se abre el sistema en este navegador. Si después se
+     elige «Sistema» u «Oscuro» (Configuración → Apariencia, o el botón de la luna), se respeta esa elección. --}}
+<script>
+    if (!window.localStorage.getItem('tema.inicializado')) {
+        window.localStorage.setItem('tema.inicializado', '1');
+
+        if (!window.localStorage.getItem('flux.appearance')) {
+            window.localStorage.setItem('flux.appearance', 'light');
+        }
+    }
+</script>
 @fluxAppearance

@@ -2,6 +2,9 @@
 @import "../../vendor/livewire/flux/dist/flux.css";
 @import "../../vendor/power-components/livewire-powergrid/resources/css/tailwind4.css";
 
+/* Tema visual (menú flotante, franja violeta, tarjetas). Para volver al estilo anterior, quita esta línea. */
+@import "./tema.css";
+
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
@@ -32,28 +35,28 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-pg-primary-50: oklch(0.985 0 0);
-    --color-pg-primary-100: oklch(0.97 0 0);
-    --color-pg-primary-200: oklch(0.922 0 0);
-    --color-pg-primary-300: oklch(0.87 0 0);
-    --color-pg-primary-400: oklch(0.708 0 0);
-    --color-pg-primary-500: oklch(0.556 0 0);
-    --color-pg-primary-600: oklch(0.439 0 0);
-    --color-pg-primary-700: oklch(0.371 0 0);
-    --color-pg-primary-800: oklch(0.269 0 0);
-    --color-pg-primary-900: oklch(0.205 0 0);
-    --color-pg-primary-950: oklch(0.145 0 0);
+    --color-pg-primary-50: #f8f6fc;
+    --color-pg-primary-100: #f1edf8;
+    --color-pg-primary-200: #e4def0;
+    --color-pg-primary-300: #d0c7e2;
+    --color-pg-primary-400: #a79bc2;
+    --color-pg-primary-500: #7d7399;
+    --color-pg-primary-600: #5f5679;
+    --color-pg-primary-700: #4a4361;
+    --color-pg-primary-800: #332e45;
+    --color-pg-primary-900: #231f31;
+    --color-pg-primary-950: #161320;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
-    --color-accent-foreground: var(--color-white);
+    --color-accent: #6d4aa8;
+    --color-accent-content: #5b3d99;
+    --color-accent-foreground: #ffffff;
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent: #a28ad8;
+        --color-accent-content: #c7b8ee;
+        --color-accent-foreground: #1b1530;
     }
 }
 

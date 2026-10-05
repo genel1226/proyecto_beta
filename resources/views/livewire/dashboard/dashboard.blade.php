@@ -119,19 +119,13 @@
         </script>
     @endassets
 
-    <div class="flex flex-wrap items-center justify-between gap-2 py-6 bg-zinc-100 px-3 my-5 dark:bg-zinc-800">
-        <div class="flex text-4xl font-bold items-center gap-2 text-zinc-700 dark:text-zinc-200">
-            <flux:icon.home class="size-12" />
-            Dashboard
-        </div>
+    <x-pagina-titulo icono="home" titulo="Dashboard">
         <flux:text class="text-xs text-zinc-500">
             Actualizado a las {{ now()->format('H:i') }} · se refresca cada minuto
         </flux:text>
-    </div>
+    </x-pagina-titulo>
 
     @php
-        $tarjeta =
-            'block border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 transition hover:bg-zinc-50 dark:hover:bg-zinc-800/60';
         $coloresHex = [
             'green' => '#22c55e',
             'amber' => '#f59e0b',
@@ -150,66 +144,81 @@
     @endphp
 
     @if (!$hayAlgo)
-        <flux:text class="mx-3 text-zinc-500">
+        <flux:text class="tarjeta text-zinc-500">
             Todavía no tienes permisos para ver información en este panel. Pídele a un administrador que te los asigne.
         </flux:text>
     @else
-        {{-- ===== Indicadores ===== --}}
-        <div class="mx-3 mb-6 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        {{-- ===== Indicadores: fondo suave e ícono en el color fuerte del mismo tono ===== --}}
+        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             @if ($verLicencias)
-                <a href="{{ route('licencias') }}" wire:navigate class="{{ $tarjeta }}">
-                    <div class="text-xs text-zinc-500">Licencias activas</div>
-                    <div class="mt-1 text-3xl font-bold tabular-nums text-blue-600 dark:text-blue-400">
-                        {{ $estados['V'] + $estados['X'] }}
-                    </div>
+                <a href="{{ route('licencias') }}" wire:navigate class="kpi" data-tono="violeta">
+                    <span class="kpi-icono"><flux:icon.clipboard-document-list class="size-6" /></span>
+                    <span class="kpi-texto">
+                        <span class="kpi-etiqueta">Licencias activas</span>
+                        <span class="kpi-valor">{{ $estados['V'] + $estados['X'] }}</span>
+                        <span class="kpi-nota">Vigentes y por vencer</span>
+                    </span>
                 </a>
 
-                <a href="{{ route('licencias') }}" wire:navigate class="{{ $tarjeta }}">
-                    <div class="text-xs text-zinc-500">Por vencer (15 días)</div>
-                    <div class="mt-1 text-3xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
-                        {{ $porVencer }}
-                    </div>
+                <a href="{{ route('licencias') }}" wire:navigate class="kpi" data-tono="ambar">
+                    <span class="kpi-icono"><flux:icon.clock class="size-6" /></span>
+                    <span class="kpi-texto">
+                        <span class="kpi-etiqueta">Por vencer</span>
+                        <span class="kpi-valor">{{ $porVencer }}</span>
+                        <span class="kpi-nota">En 15 días o menos</span>
+                    </span>
                 </a>
 
-                <a href="{{ route('licencias') }}" wire:navigate class="{{ $tarjeta }}">
-                    <div class="text-xs text-zinc-500">Vencidas</div>
-                    <div class="mt-1 text-3xl font-bold tabular-nums text-rose-600 dark:text-rose-400">
-                        {{ $estados['N'] }}
-                    </div>
+                <a href="{{ route('licencias') }}" wire:navigate class="kpi" data-tono="rosa">
+                    <span class="kpi-icono"><flux:icon.exclamation-triangle class="size-6" /></span>
+                    <span class="kpi-texto">
+                        <span class="kpi-etiqueta">Vencidas</span>
+                        <span class="kpi-valor">{{ $estados['N'] }}</span>
+                        <span class="kpi-nota">Sin acceso al CMMS</span>
+                    </span>
                 </a>
 
-                <a href="{{ route('licencias') }}" wire:navigate class="{{ $tarjeta }}">
-                    <div class="text-xs text-zinc-500">En proceso</div>
-                    <div class="mt-1 text-3xl font-bold tabular-nums">{{ $estados['P'] }}</div>
+                <a href="{{ route('licencias') }}" wire:navigate class="kpi" data-tono="azul">
+                    <span class="kpi-icono"><flux:icon.ellipsis-horizontal-circle class="size-6" /></span>
+                    <span class="kpi-texto">
+                        <span class="kpi-etiqueta">En proceso</span>
+                        <span class="kpi-valor">{{ $estados['P'] }}</span>
+                        <span class="kpi-nota">Ventas en negociación</span>
+                    </span>
                 </a>
             @endif
 
             @if ($verEmpresas)
-                <a href="{{ route('empresas') }}" wire:navigate class="{{ $tarjeta }}">
-                    <div class="text-xs text-zinc-500">Empresas activas</div>
-                    <div class="mt-1 text-3xl font-bold tabular-nums">{{ $empresasActivas }}</div>
-                    <div class="text-xs text-zinc-500 mt-0.5">{{ $demosEnCurso }} en demo</div>
+                <a href="{{ route('empresas') }}" wire:navigate class="kpi" data-tono="turquesa">
+                    <span class="kpi-icono"><flux:icon.building-office class="size-6" /></span>
+                    <span class="kpi-texto">
+                        <span class="kpi-etiqueta">Empresas activas</span>
+                        <span class="kpi-valor">{{ $empresasActivas }}</span>
+                        <span class="kpi-nota">{{ $demosEnCurso }} en demo</span>
+                    </span>
                 </a>
             @endif
 
             @if ($verMontos)
-                <a href="{{ route('reportes') }}" wire:navigate class="{{ $tarjeta }}">
-                    <div class="text-xs text-zinc-500">Facturado este mes</div>
-                    <div class="mt-1 text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                        ${{ number_format($facturadoMes, 2) }}
-                    </div>
+                <a href="{{ route('reportes') }}" wire:navigate class="kpi" data-tono="verde">
+                    <span class="kpi-icono"><flux:icon.banknotes class="size-6" /></span>
+                    <span class="kpi-texto">
+                        <span class="kpi-etiqueta">Facturado este mes</span>
+                        <span class="kpi-valor">${{ number_format($facturadoMes, 2) }}</span>
+                        <span class="kpi-nota">Pagos del mes en curso</span>
+                    </span>
                 </a>
             @endif
         </div>
 
-        <div class="mx-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {{-- ===== Próximos vencimientos ===== --}}
             @if ($verLicencias)
-                <div class="lg:col-span-2 border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+                <div class="lg:col-span-2 tarjeta">
                     <div class="flex items-center justify-between mb-2">
                         <flux:heading size="sm">Próximos vencimientos</flux:heading>
                         <a href="{{ route('licencias') }}" wire:navigate
-                            class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Ver todas →</a>
+                            class="text-xs font-semibold text-accent-content hover:underline">Ver todas →</a>
                     </div>
 
                     <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -234,7 +243,7 @@
             @if ($verLicencias || $verEmpresas)
                 <div class="space-y-6">
                     @if ($verLicencias)
-                        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+                        <div class="tarjeta">
                             <flux:heading size="sm" class="mb-3">Licencias por estado</flux:heading>
 
                             @if ($totalLicencias === 0)
@@ -272,7 +281,7 @@
                     @endif
 
                     @if ($verEmpresas)
-                        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+                        <div class="tarjeta">
                             <flux:heading size="sm" class="mb-2">Cuentas demo</flux:heading>
 
                             <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -297,11 +306,11 @@
 
             {{-- ===== Facturación de los últimos 6 meses (barras) ===== --}}
             @if ($verMontos)
-                <div class="lg:col-span-2 border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+                <div class="lg:col-span-2 tarjeta">
                     <div class="flex items-center justify-between mb-4">
                         <flux:heading size="sm">Facturación de los últimos 6 meses</flux:heading>
                         <a href="{{ route('reportes') }}" wire:navigate
-                            class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Ver reportes →</a>
+                            class="text-xs font-semibold text-accent-content hover:underline">Ver reportes →</a>
                     </div>
 
                     @php
@@ -314,7 +323,7 @@
                                 ->map(fn($e) => \Illuminate\Support\Str::ucfirst($e))
                                 ->all(),
                             'valores' => collect($facturacionMeses)->pluck('total')->all(),
-                            'colores' => '#10b981',
+                            'colores' => '#7a58b8',
                         ];
                     @endphp
 
@@ -328,11 +337,11 @@
 
             {{-- ===== Últimos pagos ===== --}}
             @if ($verPagos)
-                <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+                <div class="tarjeta">
                     <div class="flex items-center justify-between mb-2">
                         <flux:heading size="sm">Últimos pagos</flux:heading>
                         <a href="{{ route('pagos') }}" wire:navigate
-                            class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Ver todos →</a>
+                            class="text-xs font-semibold text-accent-content hover:underline">Ver todos →</a>
                     </div>
 
                     <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
