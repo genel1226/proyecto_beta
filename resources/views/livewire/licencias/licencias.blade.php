@@ -55,8 +55,9 @@
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
-                                <flux:select wire:model.live="empresa_id" label="Empresa"
-                                    :disabled="(bool) $licencia_id" placeholder="Selecciona una empresa...">
+                                <flux:select wire:model.live="empresa_id" wire:blur="validarCampo('empresa_id')"
+                                    label="Empresa" :disabled="(bool) $licencia_id"
+                                    placeholder="Selecciona una empresa...">
                                     @foreach ($empresas as $empresa)
                                         <flux:select.option value="{{ $empresa->id }}">{{ $empresa->razon_social }}
                                         </flux:select.option>
@@ -73,9 +74,10 @@
                             <div class="grid grid-cols-2 gap-4">
                                 {{-- El mínimo de "hoy" solo aplica al crear; al editar la fecha de inicio ya puede ser pasada --}}
                                 <flux:input label="Fecha de inicio" type="date" wire:model.live="start_date"
+                                    wire:blur="validarCampo('start_date')"
                                     :min="$licencia_id ? null : now()->format('Y-m-d')" />
                                 <flux:input label="Fecha de vencimiento" type="date" wire:model.live="end_date"
-                                    :min="$this->minEndDate" />
+                                    wire:blur="validarCampo('end_date')" :min="$this->minEndDate" />
                             </div>
 
                             {{-- Plan: control segmentado, no un dropdown --}}
@@ -168,7 +170,8 @@
                             {{-- Descuento: se ve con licenses.descuento.ver, se edita con licenses.descuento.aplicar --}}
                             @if ($verDescuento)
                                 <flux:input label="Descuento (USD)" type="number" min="0" step="1"
-                                    wire:model.live="descuento" :disabled="!$aplicarDescuento"
+                                    wire:model.live="descuento" wire:blur="validarCampo('descuento')"
+                                    :disabled="!$aplicarDescuento"
                                     :description="$aplicarDescuento
                                         ?
                                         'Único monto que edita el vendedor directamente.' :

@@ -139,17 +139,28 @@ class Licencias extends Component
     }
 
     /**
-     * Validación en tiempo real: se dispara cada vez que un campo con
-     * wire:model.live/.blur cambia (ver el blade). Solo valida ESE campo.
-     * Si el usuario está editando, "estado_inicial" simplemente no está
-     * en las reglas de ese modo, así que aquí se ignora sin error.
+     * Validación en tiempo real: se dispara cada vez que el valor de un campo
+     * con wire:model.live cambia (ver el blade).
      */
     public function updated(string $property): void
     {
+        $this->validarCampo($property);
+    }
+
+    /**
+     * Valida UN solo campo, sin esperar a "Guardar". La llaman updated()
+     * (el valor cambió) y wire:blur (el usuario salió del campo, aunque no
+     * haya cambiado nada: Livewire no manda valores sin cambios, pero una
+     * acción sí se manda siempre). El nombre llega del navegador, por eso
+     * solo se acepta si está en las reglas. Si se está editando,
+     * "estado_inicial" no está en las reglas de ese modo y se ignora.
+     */
+    public function validarCampo(string $campo): void
+    {
         $reglas = $this->reglas($this->licencia_id !== null);
 
-        if (array_key_exists($property, $reglas)) {
-            $this->validateOnly($property, $reglas);
+        if (array_key_exists($campo, $reglas)) {
+            $this->validateOnly($campo, $reglas);
         }
     }
 

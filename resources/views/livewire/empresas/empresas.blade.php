@@ -41,16 +41,17 @@
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <flux:input label="Razón social *" wire:model.live.debounce.500ms="razon_social"
-                            placeholder="Nombre legal de la empresa" />
+                            wire:blur="validarCampo('razon_social')" placeholder="Nombre legal de la empresa" />
 
                         <flux:input label="Nombre comercial *" wire:model.live.debounce.500ms="nombre_comercial"
-                            placeholder="Nombre con el que se conoce" />
+                            wire:blur="validarCampo('nombre_comercial')" placeholder="Nombre con el que se conoce" />
 
-                        <flux:input label="NIT *" wire:model.live.debounce.500ms="nit" placeholder="Número de identificación" />
+                        <flux:input label="NIT *" wire:model.live.debounce.500ms="nit" wire:blur="validarCampo('nit')"
+                            placeholder="Número de identificación" />
 
                         {{-- País: lista completa con buscador. .live: el botón de guardar
                              depende de este campo, así que necesita avisar al instante --}}
-                        <flux:select wire:model.live="pais" label="País *"
+                        <flux:select wire:model.live="pais" wire:blur="validarCampo('pais')" label="País *"
                             placeholder="Selecciona un país...">
                             <x-slot name="search">
                                 {{-- <flux:select.search class="px-4" placeholder="Buscar país..." /> --}}
@@ -62,19 +63,20 @@
                         </flux:select>
 
                         <flux:input label="Correo electrónico *" type="email" wire:model.live.debounce.500ms="email"
-                            placeholder="contacto@empresa.com"
+                            wire:blur="validarCampo('email')" placeholder="contacto@empresa.com"
                             description="A este correo llegan las alertas de vencimiento." />
 
-                        <flux:input label="Teléfono" wire:model.live.debounce.500ms="telefono" placeholder="Opcional" />
+                        <flux:input label="Teléfono" wire:model.live.debounce.500ms="telefono"
+                            wire:blur="validarCampo('telefono')" placeholder="Opcional" />
 
                         <div class="sm:col-span-2">
                             <flux:input label="Página web" wire:model.live.debounce.500ms="pagina_web"
-                                placeholder="www.empresa.com (opcional)" />
+                                wire:blur="validarCampo('pagina_web')" placeholder="www.empresa.com (opcional)" />
                         </div>
 
                         <div class="sm:col-span-2">
-                            <flux:textarea label="Dirección" wire:model.live.debounce.500ms="direccion" rows="2"
-                                placeholder="Opcional" />
+                            <flux:textarea label="Dirección" wire:model.live.debounce.500ms="direccion"
+                                wire:blur="validarCampo('direccion')" rows="2" placeholder="Opcional" />
                         </div>
 
                         {{-- Cuenta demo: empresa de prueba, sin licencia --}}
@@ -83,7 +85,8 @@
                                 description="Empresa de prueba: todavía no tiene licencia. Al crearle su primera licencia Vigente deja de ser demo." />
 
                             @if ($es_demo)
-                                <flux:input type="date" label="Fin de la prueba *" wire:model.live="demo_hasta" />
+                                <flux:input type="date" label="Fin de la prueba *" wire:model.live="demo_hasta"
+                                    wire:blur="validarCampo('demo_hasta')" />
                             @endif
 
                             @error('es_demo')

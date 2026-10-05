@@ -54,6 +54,42 @@ class TiposUsuario extends Component
         Gate::authorize('tipos_usuario.index');
     }
 
+    /**
+     * Validación en tiempo real: se dispara cada vez que el valor de un campo
+     * con wire:model.live cambia (ver el blade).
+     */
+    public function updated(string $property): void
+    {
+        $this->validarCampo($property);
+    }
+
+    /**
+     * Valida UN solo campo, sin esperar a "Guardar". La llaman updated()
+     * (el valor cambió) y wire:blur (el usuario salió del campo, aunque no
+     * haya escrito nada: Livewire no manda valores sin cambios, pero una
+     * acción sí se manda siempre). El nombre llega del navegador, por eso
+     * solo se acepta si está en rules().
+     */
+    public function validarCampo(string $campo): void
+    {
+        if (array_key_exists($campo, $this->rules())) {
+            $this->validateOnly($campo);
+        }
+    }
+
+    /**
+     * No reemplaza la validación de guardar(), que revisa todo antes de
+     * tocar la base de datos: solo decide si el botón se deja presionar.
+     */
+    public function getPuedeGuardarProperty(): bool
+    {
+        $completos = trim($this->codigo) !== ''
+            && trim($this->nombre) !== ''
+            && trim((string) $this->precio_unitario) !== '';
+
+        return $completos && $this->getErrorBag()->isEmpty();
+    }
+
     protected function rules(): array
     {
         return [
@@ -61,7 +97,7 @@ class TiposUsuario extends Component
                 'required',
                 'string',
                 'max:10',
-                'regex:/^[A-Z0-9-]+$/',
+                'regex:/^[A-Za-z0-9-]+$/',
                 Rule::unique('tipos_usuario', 'codigo')->ignore($this->tipo_id),
             ],
             'nombre' => ['required', 'string', 'max:60'],

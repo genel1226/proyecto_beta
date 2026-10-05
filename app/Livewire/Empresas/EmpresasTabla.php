@@ -6,6 +6,7 @@ use App\Models\Empresa\Empresa;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use PowerComponents\LivewirePowerGrid\Button;
@@ -81,6 +82,58 @@ final class EmpresasTabla extends PowerGridComponent
                 );
             })
 
+            // Tipo de cuenta: demo (con o sin la prueba vencida), con licencia, o sin licencia
+            ->add('licencia_badge', function (Empresa $model) {
+                [$label, $color] = match (true) {
+                    $model->trial_ends_at !== null && $model->trial_ends_at->isPast() => ['Demo vencida', 'rose'],
+                    $model->trial_ends_at !== null => ['Demo hasta '.$model->trial_ends_at->format('d/m/Y'), 'violet'],
+                    $model->con_licencia === '1' => ['Con licencia', 'green'],
+                    default => ['Sin licencia', 'zinc'],
+                };
+
+                return Blade::render(
+                    '<flux:badge color="{{ $color }}" size="sm">{{ $label }}</flux:badge>',
+                    ['color' => $color, 'label' => $label]
+                );
+            })
+
+            // Último pago registrado de esta empresa (de cualquiera de sus licencias).
+            ->add('ultimo_pago', function (Empresa $model) {
+                $fecha = DB::table('licencia_pagos as p')
+                    ->join('licencias as l', 'l.id', '=', 'p.licencia_id')
+                    ->where('l.empresa_id', $model->id)
+                    ->max('p.fecha_pago');
+
+                return $fecha ? Carbon::parse($fecha)->format('d/m/Y') : '—';
+            })
+
+            // Próximo pago = vencimiento de su licencia vigente (o por vencer).
+            // Rojo con 7 días o menos, ámbar con 15 o menos, verde después.
+            ->add('proximo_pago', function (Empresa $model) {
+                $vencimiento = $model->licencias()
+                    ->whereIn('estado', ['V', 'X'])
+                    ->orderBy('fecha_vencimiento')
+                    ->value('fecha_vencimiento');
+
+                if (! $vencimiento) {
+                    return '—';
+                }
+
+                $fecha = Carbon::parse($vencimiento);
+                $dias = (int) now()->startOfDay()->diff($fecha->copy()->startOfDay())->format('%r%a');
+
+                $color = match (true) {
+                    $dias <= 7 => 'red',
+                    $dias <= 15 => 'amber',
+                    default => 'green',
+                };
+
+                return Blade::render(
+                    '<flux:badge color="{{ $color }}" size="sm">{{ $texto }}</flux:badge>',
+                    ['color' => $color, 'texto' => $fecha->format('d/m/Y')]
+                );
+            })
+
             ->add('created_at_formatted', fn (Empresa $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
     }
 
@@ -125,17 +178,21 @@ final class EmpresasTabla extends PowerGridComponent
             //     ->sortable()
             //     ->searchable(),
 
+            Column::make('Licencia', 'licencia_badge'),
+
+            Column::make('Último pago', 'ultimo_pago'),
+
+            Column::make('Próximo pago', 'proximo_pago'),
+
             Column::make('Estado', 'estado_badge', 'active')
                 ->sortable(),
 
             // Column::make('Created at', 'created_at_formatted', 'created_at')
             //     ->sortable(),
 
-            // La columna de acciones SIEMPRE se declara: si el método actions()
-            // existe en la clase (más abajo), PowerGrid exige que columns()
-            // tenga Column::action(), sin importar si va a mostrar botones o
-            // no. Lo que sí varía por permiso es qué botones aparecen DENTRO
-            // (eso ya lo resuelve actions() con sus Gate::allows()).
+            // La columna de acciones SIEMPRE se declara: PowerGrid la exige porque esta clase
+            // define actions(), aunque para este usuario no haya botones. Lo que varía por
+            // permiso es qué botones aparecen dentro.
             Column::action('Acciones'),
         ];
     }

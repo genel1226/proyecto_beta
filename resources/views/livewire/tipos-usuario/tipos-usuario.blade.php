@@ -26,15 +26,17 @@
                     <flux:separator />
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <flux:input label="Código *" wire:model="codigo" placeholder="GT-4"
+                        <flux:input label="Código *" wire:model.live.debounce.500ms="codigo"
+                            wire:blur="validarCampo('codigo')" placeholder="GT-4"
                             description="Se guarda en mayúsculas." />
 
                         <flux:input label="Precio unitario (USD) *" type="number" min="0" step="0.01"
-                            wire:model="precio_unitario" placeholder="0.00"
-                            description="Lo que cuesta cada usuario de este tipo." />
+                            wire:model.live.debounce.500ms="precio_unitario" wire:blur="validarCampo('precio_unitario')"
+                            placeholder="0.00" description="Lo que cuesta cada usuario de este tipo." />
 
                         <div class="sm:col-span-2">
-                            <flux:input label="Nombre *" wire:model="nombre" placeholder="Ej: Supervisor de planta" />
+                            <flux:input label="Nombre *" wire:model.live.debounce.500ms="nombre"
+                                wire:blur="validarCampo('nombre')" placeholder="Ej: Supervisor de planta" />
                         </div>
                     </div>
 
@@ -50,7 +52,8 @@
                     <div class="flex items-center">
                         <flux:text class="text-xs">* Campos obligatorios</flux:text>
                         <flux:spacer />
-                        <flux:button type="button" wire:click="guardar" variant="primary">
+                        <flux:button type="button" wire:click="guardar" variant="primary"
+                            :disabled="! $this->puedeGuardar">
                             {{ $tipo_id ? 'Guardar cambios' : 'Guardar tipo' }}
                         </flux:button>
                     </div>

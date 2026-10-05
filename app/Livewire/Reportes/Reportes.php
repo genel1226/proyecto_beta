@@ -86,6 +86,20 @@ class Reportes extends Component
     }
 
     /**
+     * Facturación por plan (el "producto" que se vende: Lite, Connect, Ultra, Insight).
+     */
+    public function getFacturacionPorPlanProperty()
+    {
+        return (clone $this->consultaPagos())
+            ->join('licencias', 'licencias.id', '=', 'licencia_pagos.licencia_id')
+            ->join('plans', 'plans.id', '=', 'licencias.plan_id')
+            ->selectRaw('plans.nombre as plan, SUM(licencia_pagos.monto) as total, COUNT(*) as cantidad')
+            ->groupBy('plans.id', 'plans.nombre')
+            ->orderByDesc('total')
+            ->get();
+    }
+
+    /**
      * Conteo de licencias por estado — foto de ahora, no del rango.
      */
     public function getLicenciasPorEstadoProperty()
@@ -123,6 +137,7 @@ class Reportes extends Component
             'kpis' => $this->kpis,
             'porMes' => $this->facturacionPorMes,
             'porEmpresa' => $this->facturacionPorEmpresa,
+            'porPlan' => $this->facturacionPorPlan,
         ]);
 
         $nombre = "reporte-ventas-{$this->desde}-a-{$this->hasta}.pdf";

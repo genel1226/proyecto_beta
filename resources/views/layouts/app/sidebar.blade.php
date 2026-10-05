@@ -1,142 +1,149 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
-    <head>
-        @include('partials.head')
-    </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
-        {{-- sidebar --}}
-        <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:sidebar.header>
-                <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
-                <flux:sidebar.collapse class="lg:hidden" />
-            </flux:sidebar.header>
 
-            <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
+<head>
+    @include('partials.head')
+</head>
+
+<body class="min-h-screen bg-white dark:bg-zinc-800">
+    {{-- sidebar --}}
+    <flux:sidebar sticky collapsible class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar.header>
+            <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+            <flux:sidebar.collapse class="lg:hidden" />
+        </flux:sidebar.header>
+
+        <flux:sidebar.nav>
+            <flux:sidebar.group :heading="__('Platform')" class="grid">
+                <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')"
+                    wire:navigate>
+                    {{ __('Dashboard') }}
+                </flux:sidebar.item>
+
+                {{-- Licencias --}}
+                @can('licenses.index')
+                    <flux:sidebar.item icon="clipboard-document-list" :href="route('licencias')"
+                        :current="request()->routeIs('licencias')" wire:navigate>
+                        {{ __('Licencias') }}
                     </flux:sidebar.item>
-                    
-                    {{-- Licencias --}}
-                    @can('licenses.index')
-                        <flux:sidebar.item icon="clipboard-document-list" :href="route('licencias')" :current="request()->routeIs('licencias')" wire:navigate>
-                            {{ __('Licencias') }}
-                        </flux:sidebar.item>
-                    @endcan
+                @endcan
 
-                    {{-- Empresas --}}
-                    @can('empresas.index')
-                        <flux:sidebar.item icon="building-office" :href="route('empresas')" :current="request()->routeIs('empresas')" wire:navigate>
-                            {{ __('Empresas') }}
-                        </flux:sidebar.item>
-                    @endcan
+                {{-- Empresas --}}
+                @can('empresas.index')
+                    <flux:sidebar.item icon="building-office" :href="route('empresas')"
+                        :current="request()->routeIs('empresas')" wire:navigate>
+                        {{ __('Empresas') }}
+                    </flux:sidebar.item>
+                @endcan
 
-                    {{-- Pagos --}}
-                    @can('pagos.index')
-                        <flux:sidebar.item icon="banknotes" :href="route('pagos')" :current="request()->routeIs('pagos')" wire:navigate>
-                            {{ __('Pagos') }}
-                        </flux:sidebar.item>
-                    @endcan
+                {{-- Pagos --}}
+                @can('pagos.index')
+                    <flux:sidebar.item icon="banknotes" :href="route('pagos')" :current="request()->routeIs('pagos')"
+                        wire:navigate>
+                        {{ __('Pagos') }}
+                    </flux:sidebar.item>
+                @endcan
 
-                    {{-- Reportes --}}
-                    @can('reportes.index')
-                        <flux:sidebar.item icon="chart-bar" :href="route('reportes')" :current="request()->routeIs('reportes')" wire:navigate>
-                            {{ __('Reportes') }}
-                        </flux:sidebar.item>
-                    @endcan
+                {{-- Reportes --}}
+                @can('reportes.index')
+                    <flux:sidebar.item icon="chart-bar" :href="route('reportes')" :current="request()->routeIs('reportes')"
+                        wire:navigate>
+                        {{ __('Reportes') }}
+                    </flux:sidebar.item>
+                @endcan
 
-                    {{-- Tipos de usuario --}}
-                    @can('tipos_usuario.index')
-                        <flux:sidebar.item icon="user-group" :href="route('tipos-usuario')" :current="request()->routeIs('tipos-usuario')" wire:navigate>
-                            {{ __('Tipos de usuario') }}
-                        </flux:sidebar.item>
-                    @endcan
+                {{-- Tipos de usuario --}}
+                @can('tipos_usuario.index')
+                    <flux:sidebar.item icon="user-group" :href="route('tipos-usuario')"
+                        :current="request()->routeIs('tipos-usuario')" wire:navigate>
+                        {{ __('Tipos de usuario') }}
+                    </flux:sidebar.item>
+                @endcan
 
-                    {{-- Permisos --}}
-                    @can('permisos.admin')
-                        <flux:sidebar.item icon="key" :href="route('permisos')" :current="request()->routeIs('permisos')" wire:navigate>
-                            {{ __('Permisos') }}
-                        </flux:sidebar.item>
-                    @endcan
-                </flux:sidebar.group>
-            </flux:sidebar.nav>
+                {{-- Usuarios --}}
+                @can('usuarios.index')
+                    <flux:sidebar.item icon="users" :href="route('usuarios')" :current="request()->routeIs('usuarios')"
+                        wire:navigate>
+                        {{ __('Usuarios') }}
+                    </flux:sidebar.item>
+                @endcan
 
-            <flux:spacer />
+                {{-- Roles --}}
+                @can('roles.index')
+                    <flux:sidebar.item icon="shield-check" :href="route('roles')" :current="request()->routeIs('roles')"
+                        wire:navigate>
+                        {{ __('Roles') }}
+                    </flux:sidebar.item>
+                @endcan
+            </flux:sidebar.group>
+        </flux:sidebar.nav>
 
-        </flux:sidebar>
+        <flux:spacer />
 
-        {{-- Header --}}
-        <flux:header  class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:sidebar.toggle class=" mr-2" icon="bars-3" inset="left" />
+    </flux:sidebar>
 
-            <flux:spacer />
+    {{-- Header --}}
+    <flux:header class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar.toggle class=" mr-2" icon="bars-3" inset="left" />
 
-            <x-desktop-user-menu />
-        </flux:header>
+        <flux:spacer />
 
-        <!-- Mobile User Menu -->
-        <flux:header class="lg:hidden">
-            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+        <x-desktop-user-menu />
+    </flux:header>
 
-            <flux:spacer />
+    <!-- Mobile User Menu -->
+    <flux:header class="lg:hidden">
+        <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
-            <flux:dropdown position="top" align="end">
-                <flux:profile
-                    :initials="auth()->user()->initials()"
-                    icon-trailing="chevron-down"
-                />
+        <flux:spacer />
 
-                <flux:menu>
-                    <flux:menu.radio.group>
-                        <div class="p-0 text-sm font-normal">
-                            <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-                                <flux:avatar
-                                    :name="auth()->user()->name"
-                                    :initials="auth()->user()->initials()"
-                                />
+        <flux:dropdown position="top" align="end">
+            <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
 
-                                <div class="grid flex-1 text-start text-sm leading-tight">
-                                    <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
-                                    <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
-                                </div>
+            <flux:menu>
+                <flux:menu.radio.group>
+                    <div class="p-0 text-sm font-normal">
+                        <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
+                            <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" />
+
+                            <div class="grid flex-1 text-start text-sm leading-tight">
+                                <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
+                                <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
                             </div>
                         </div>
-                    </flux:menu.radio.group>
+                    </div>
+                </flux:menu.radio.group>
 
-                    <flux:menu.separator />
+                <flux:menu.separator />
 
-                    <flux:menu.radio.group>
-                        <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
-                            {{ __('Settings') }}
-                        </flux:menu.item>
-                    </flux:menu.radio.group>
+                <flux:menu.radio.group>
+                    <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
+                        {{ __('Settings') }}
+                    </flux:menu.item>
+                </flux:menu.radio.group>
 
-                    <flux:menu.separator />
+                <flux:menu.separator />
 
-                    <form method="POST" action="{{ route('logout') }}" class="w-full">
-                        @csrf
-                        <flux:menu.item
-                            as="button"
-                            type="submit"
-                            icon="arrow-right-start-on-rectangle"
-                            class="w-full cursor-pointer"
-                            data-test="logout-button"
-                        >
-                            {{ __('Log out') }}
-                        </flux:menu.item>
-                    </form>
-                </flux:menu>
-            </flux:dropdown>
-        </flux:header>
+                <form method="POST" action="{{ route('logout') }}" class="w-full">
+                    @csrf
+                    <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle"
+                        class="w-full cursor-pointer" data-test="logout-button">
+                        {{ __('Log out') }}
+                    </flux:menu.item>
+                </form>
+            </flux:menu>
+        </flux:dropdown>
+    </flux:header>
 
-        {{ $slot }}
+    {{ $slot }}
 
-        @persist('toast')
-            <flux:toast.group>
-                <flux:toast />
-            </flux:toast.group>
-        @endpersist
+    @persist('toast')
+        <flux:toast.group>
+            <flux:toast />
+        </flux:toast.group>
+    @endpersist
 
-        @fluxScripts
-    </body>
+    @fluxScripts
+</body>
+
 </html>

@@ -49,14 +49,12 @@
         </div>
 
         <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400">
-                {{ $this->kpis['licencias_activas'] }}</div>
+            <div class="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400">{{ $this->kpis['licencias_activas'] }}</div>
             <div class="text-xs text-zinc-500 mt-1">Licencias activas hoy</div>
         </div>
 
         <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 text-center">
-            <div class="text-2xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
-                {{ $this->kpis['por_vencer_15'] }}</div>
+            <div class="text-2xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{{ $this->kpis['por_vencer_15'] }}</div>
             <div class="text-xs text-zinc-500 mt-1">Por vencer en 15 días</div>
         </div>
 
@@ -109,18 +107,33 @@
             </div>
         </div>
 
+        {{-- Facturación por plan (producto) --}}
+        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
+            <flux:heading size="sm" class="mb-3">Facturación por plan</flux:heading>
+
+            <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                @forelse ($this->facturacionPorPlan as $fila)
+                    <div class="flex justify-between py-2 text-sm">
+                        <span>{{ $fila->plan }}</span>
+                        <span class="flex gap-3">
+                            <span class="text-zinc-500">{{ $fila->cantidad }} pago(s)</span>
+                            @can('reportes.montos')
+                                <span class="font-semibold tabular-nums">${{ number_format($fila->total, 2) }}</span>
+                            @endcan
+                        </span>
+                    </div>
+                @empty
+                    <flux:text class="text-zinc-500 py-2">Sin pagos en este rango.</flux:text>
+                @endforelse
+            </div>
+        </div>
+
         {{-- Licencias por estado --}}
-        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 lg:col-span-2">
+        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
             <flux:heading size="sm" class="mb-3">Licencias por estado (ahora mismo)</flux:heading>
 
             @php
-                $etiquetas = [
-                    'V' => 'Vigente',
-                    'X' => 'Por vencer',
-                    'N' => 'Vencida',
-                    'P' => 'En proceso',
-                    'C' => 'Cancelada',
-                ];
+                $etiquetas = ['V' => 'Vigente', 'X' => 'Por vencer', 'N' => 'Vencida', 'P' => 'En proceso', 'C' => 'Cancelada'];
                 $colores = ['V' => 'green', 'X' => 'amber', 'N' => 'rose', 'P' => 'blue', 'C' => 'zinc'];
             @endphp
 

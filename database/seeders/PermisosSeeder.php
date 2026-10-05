@@ -2,30 +2,35 @@
 
 namespace Database\Seeders;
 
+use App\Models\Rol;
 use App\Models\User;
+use App\Services\RolesUsuario;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Catálogo de permisos del sistema (22 permisos en 6 módulos).
+ * Catálogo de permisos y roles base del sistema.
  *
- * Se puede correr las veces que haga falta: si un permiso ya existe
- * (mismo name + guard_name) lo actualiza en vez de duplicarlo.
+ * Se puede correr las veces que haga falta, sin duplicar nada:
  *
  *   php artisan db:seed --class=PermisosSeeder
  *
- * Al final le asigna TODOS los permisos al primer usuario de la tabla
- * `users` (el de id más bajo), para que alguien pueda usar la pantalla
- * de switches y repartir permisos al resto.
+ * Qué hace, en orden:
+ *   1. Crea o actualiza los permisos del catálogo (y desactiva los que ya no existen).
+ *   2. Crea los 3 roles base. El Administrador SIEMPRE se resincroniza con todos los
+ *      permisos (así los permisos nuevos le llegan solos). Los demás reciben sus
+ *      permisos base solo la PRIMERA vez: después se editan desde la pantalla Roles
+ *      y volver a correr el seeder NO pisa esos cambios.
+ *   3. Si el usuario de id más bajo todavía no tiene rol, lo hace Administrador.
  *
  * Estructura de `permissions`:
  *   - Cada módulo tiene una fila "título" (type 0): agrupa, no otorga nada.
  *   - Cada permiso cuelga de su título vía parent_id.
- *   - type: 1 = lectura, 2 = edición (mismo criterio que ya usa la tabla).
+ *   - type: 1 = lectura, 2 = edición.
  *
- * Reglas de dependencia (las debe respetar la pantalla de switches):
- *   - <modulo>.index es la puerta de entrada: sin ella, el resto de
- *     acciones de ese módulo no sirven.
+ * Reglas de dependencia (aún no se imponen en las pantallas):
+ *   - <modulo>.index es la puerta de entrada: sin ella, el resto de acciones de
+ *     ese módulo no sirven.
  *   - licenses.descuento.aplicar exige licenses.descuento.ver.
  */
 class PermisosSeeder extends Seeder
@@ -90,18 +95,80 @@ class PermisosSeeder extends Seeder
             ],
         ],
 
-        'GESTION DE PERMISOS' => [
-            'en' => 'PERMISSION MANAGEMENT',
+        'GESTION DE USUARIOS' => [
+            'en' => 'USER MANAGEMENT',
             'permisos' => [
-                ['permisos.admin', '2', 'Usar la pantalla de switches para asignar permisos a otros usuarios', 'Manage other users permissions'],
+                ['usuarios.index', '1', 'Ver la lista de usuarios del sistema', 'View the system users list'],
+                ['usuarios.create', '2', 'Crear usuarios', 'Create users'],
+                ['usuarios.edit', '2', 'Editar usuarios y cambiarles el rol', 'Edit users and change their role'],
+                ['usuarios.desactivar', '2', 'Desactivar y reactivar usuarios', 'Deactivate and reactivate users'],
+                ['usuarios.permisos', '2', 'Dar o quitar permisos extra a un usuario en particular', 'Grant or remove extra permissions for a single user'],
             ],
+        ],
+
+        'GESTION DE ROLES' => [
+            'en' => 'ROLE MANAGEMENT',
+            'permisos' => [
+                ['roles.index', '1', 'Ver los roles y los permisos de cada uno', 'View roles and their permissions'],
+                ['roles.create', '2', 'Crear roles', 'Create roles'],
+                ['roles.edit', '2', 'Editar roles y sus permisos (afecta a todos los usuarios con ese rol)', 'Edit roles and their permissions'],
+            ],
+        ],
+    ];
+
+    /**
+     * Permisos que ya no existen en el catálogo (antes había una sola pantalla de
+     * "switches" por usuario; ahora son Roles y Usuarios). Se desactivan para que no
+     * aparezcan en las pantallas; no se borran.
+     */
+    private const OBSOLETOS = ['permisos.admin', 'GESTION DE PERMISOS'];
+
+    /**
+     * Roles base del personal interno (empresa_id = 0).
+     * 'permisos' => '*' significa todos los del catálogo.
+     */
+    private const ROLES = [
+        Rol::ADMINISTRADOR => [
+            'descripcion' => 'Acceso total. Rol del sistema: siempre tiene todos los permisos y no se puede editar.',
+            'permisos' => '*',
+        ],
+
+        'Gestor comercial' => [
+            'descripcion' => 'Opera empresas, licencias, cobros y reportes. No da de baja licencias ni administra usuarios.',
+            'permisos' => [
+                'empresas.index',
+                'empresas.create',
+                'empresas.edit',
+                'licenses.index',
+                'licenses.create',
+                'licenses.edit',
+                'licenses.renovar',
+                'licenses.activar',
+                'licenses.monto.ver',
+                'licenses.precios.ver',
+                'licenses.descuento.ver',
+                'licenses.descuento.aplicar',
+                'licenses.observaciones.ver',
+                'pagos.index',
+                'pagos.create',
+                'tipos_usuario.index',
+                'reportes.index',
+                'reportes.montos',
+                'reportes.export',
+            ],
+        ],
+
+        'Auditor' => [
+            'descripcion' => 'Solo consulta: ve empresas, licencias, pagos y reportes, sin montos ni acciones.',
+            'permisos' => ['empresas.index', 'licenses.index', 'pagos.index', 'reportes.index'],
         ],
     ];
 
     public function run(): void
     {
         DB::transaction(function () {
-            $idsAsignables = [];
+            /** @var array<string, int> $idsPorNombre nombre del permiso => id */
+            $idsPorNombre = [];
 
             foreach (self::CATALOGO as $titulo => $modulo) {
                 $idTitulo = $this->upsert(
@@ -110,16 +177,20 @@ class PermisosSeeder extends Seeder
                 );
 
                 foreach ($modulo['permisos'] as [$nombre, $type, $descripcion, $descripcionEn]) {
-                    $idsAsignables[] = $this->upsert(
+                    $idsPorNombre[$nombre] = $this->upsert(
                         ['name' => $nombre, 'guard_name' => self::GUARD],
                         ['parent_id' => $idTitulo, 'description' => $descripcion, 'description_en' => $descripcionEn, 'active' => 1, 'type' => $type],
                     );
                 }
             }
 
-            $this->command?->info(count($idsAsignables).' permisos sincronizados.');
+            $this->command?->info(count($idsPorNombre) . ' permisos sincronizados.');
 
-            $this->asignarTodosAlPrimerUsuario($idsAsignables);
+            $this->desactivarObsoletos();
+
+            $roles = $this->sincronizarRoles($idsPorNombre);
+
+            $this->asignarRolAlPrimerUsuario($roles[Rol::ADMINISTRADOR]);
         });
     }
 
@@ -147,37 +218,104 @@ class PermisosSeeder extends Seeder
         );
     }
 
+    private function desactivarObsoletos(): void
+    {
+        DB::table('permissions')
+            ->whereIn('name', self::OBSOLETOS)
+            ->update(['active' => 0, 'updated_at' => now()]);
+    }
+
+    /**
+     * Crea los roles que falten y les da sus permisos base.
+     *
+     * @param  array<string, int>  $idsPorNombre
+     * @return array<string, int> nombre del rol => id
+     */
+    private function sincronizarRoles(array $idsPorNombre): array
+    {
+        $roles = [];
+
+        foreach (self::ROLES as $nombre => $definicion) {
+            $existente = DB::table('roles')
+                ->where('name', $nombre)
+                ->where('guard_name', self::GUARD)
+                ->where('empresa_id', Rol::EMPRESA_INTERNA)
+                ->first();
+
+            $esNuevo = $existente === null;
+
+            $idRol = $esNuevo
+                ? (int) DB::table('roles')->insertGetId([
+                    'name' => $nombre,
+                    'guard_name' => self::GUARD,
+                    'active' => 1,
+                    'description' => $definicion['descripcion'],
+                    'empresa_id' => Rol::EMPRESA_INTERNA,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])
+                : (int) $existente->id;
+
+            $roles[$nombre] = $idRol;
+
+            if ($definicion['permisos'] === '*') {
+                // Administrador: siempre todos, también en cada corrida posterior.
+                $this->darPermisos($idRol, array_values($idsPorNombre));
+            } elseif ($esNuevo) {
+                // Los demás roles: solo la primera vez, para no pisar lo que se edite después.
+                $this->darPermisos($idRol, array_map(fn(string $nombrePermiso) => $idsPorNombre[$nombrePermiso], $definicion['permisos']));
+            }
+
+            $this->command?->info($esNuevo ? "Rol creado: {$nombre}" : "Rol existente: {$nombre}");
+        }
+
+        return $roles;
+    }
+
     /**
      * @param  array<int, int>  $idsPermisos
      */
-    private function asignarTodosAlPrimerUsuario(array $idsPermisos): void
+    private function darPermisos(int $idRol, array $idsPermisos): void
     {
-        $admin = User::query()->orderBy('id')->first();
+        // insertOrIgnore: la clave primaria es (permission_id, role_id), así que
+        // volver a correr el seeder no duplica ni falla.
+        DB::table('role_has_permissions')->insertOrIgnore(
+            array_map(fn(int $idPermiso) => ['permission_id' => $idPermiso, 'role_id' => $idRol], $idsPermisos)
+        );
+    }
 
-        if (! $admin) {
-            $this->command?->warn('No hay usuarios todavía: los permisos quedaron creados pero sin asignar a nadie.');
+    /**
+     * El usuario de id más bajo (quien ya tenía todos los permisos) pasa a ser
+     * Administrador, solo si todavía no tiene rol. Sus permisos directos de antes
+     * se borran porque el rol ya los incluye todos y quedarían duplicados.
+     */
+    private function asignarRolAlPrimerUsuario(int $idRolAdministrador): void
+    {
+        $primero = User::query()->orderBy('id')->first();
+
+        if (! $primero) {
+            $this->command?->warn('No hay usuarios todavía: los roles quedaron creados pero sin asignar a nadie.');
 
             return;
         }
 
-        // insertOrIgnore: la clave primaria es (permission_id, model_id, model_type),
-        // así que volver a correr el seeder no duplica ni falla.
-        DB::table('model_has_permissions')->insertOrIgnore(
-            array_map(fn (int $idPermiso) => [
-                'permission_id' => $idPermiso,
-                'model_type' => User::PERMISOS_MODEL_TYPE,
-                'model_id' => $admin->id,
-            ], $idsPermisos)
-        );
+        if (RolesUsuario::rolDe($primero->id)) {
+            return;
+        }
 
-        $this->command?->info("Los {$this->contar($idsPermisos)} permisos quedaron asignados al usuario #{$admin->id} ({$admin->email}).");
-    }
+        RolesUsuario::asignar($primero->id, Rol::findOrFail($idRolAdministrador));
 
-    /**
-     * @param  array<int, int>  $ids
-     */
-    private function contar(array $ids): int
-    {
-        return count($ids);
+        // Que no se quede fuera de su propia lista (solo ve a los internos) ni inactivo.
+        DB::table('users')->where('id', $primero->id)->update([
+            'active' => 1,
+            'empresa_id' => User::EMPRESA_INTERNA,
+        ]);
+
+        DB::table('model_has_permissions')
+            ->where('model_type', User::PERMISOS_MODEL_TYPE)
+            ->where('model_id', $primero->id)
+            ->delete();
+
+        $this->command?->info("El usuario #{$primero->id} ({$primero->email}) ahora es " . Rol::ADMINISTRADOR . '.');
     }
 }

@@ -73,15 +73,31 @@ class Empresas extends Component
     }
 
     /**
-     * Validación en tiempo real: se dispara cada vez que un campo con
-     * wire:model.live/.blur cambia (ver el blade). Solo valida ESE campo,
-     * no el formulario completo, para que el error aparezca al momento
-     * sin esperar a "Guardar".
+     * Validación en tiempo real: se dispara cada vez que el valor de un campo
+     * con wire:model.live cambia (ver el blade).
      */
     public function updated(string $property): void
     {
-        if (array_key_exists($property, $this->rules())) {
-            $this->validateOnly($property);
+        $this->validarCampo($property);
+    }
+
+    /**
+     * Valida UN solo campo, sin esperar a "Guardar". La llaman dos cosas:
+     *   - updated(): cuando el valor cambió.
+     *   - wire:blur: cuando el usuario SALE del campo, haya escrito algo o no.
+     *
+     * Lo segundo es lo que faltaba: Livewire solo manda al servidor lo que
+     * cambió, así que entrar a un campo vacío y salir sin escribir no
+     * generaba ninguna petición y por eso no salía el error. wire:blur es una
+     * acción, y una acción siempre se manda.
+     *
+     * El nombre del campo llega desde el navegador: solo se acepta si está
+     * en rules().
+     */
+    public function validarCampo(string $campo): void
+    {
+        if (array_key_exists($campo, $this->rules())) {
+            $this->validateOnly($campo);
         }
     }
 
