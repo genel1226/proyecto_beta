@@ -86,7 +86,7 @@ final class EmpresasTabla extends PowerGridComponent
             ->add('licencia_badge', function (Empresa $model) {
                 [$label, $color] = match (true) {
                     $model->trial_ends_at !== null && $model->trial_ends_at->isPast() => ['Demo vencida', 'rose'],
-                    $model->trial_ends_at !== null => ['Demo hasta '.$model->trial_ends_at->format('d/m/Y'), 'violet'],
+                    $model->trial_ends_at !== null => ['Demo hasta ' . $model->trial_ends_at->format('d/m/Y'), 'violet'],
                     $model->con_licencia === '1' => ['Con licencia', 'green'],
                     default => ['Sin licencia', 'zinc'],
                 };
@@ -134,7 +134,7 @@ final class EmpresasTabla extends PowerGridComponent
                 );
             })
 
-            ->add('created_at_formatted', fn (Empresa $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
+            ->add('created_at_formatted', fn(Empresa $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
     }
 
     public function columns(): array
@@ -222,24 +222,27 @@ final class EmpresasTabla extends PowerGridComponent
 
         if (Gate::allows('empresas.edit')) {
             $botones[] = Button::add('edit')
-                ->slot(Blade::render('<span title="Editar"><flux:icon.pencil-square class="size-4" /></span>'))
+                ->slot(Blade::render('<flux:icon.pencil-square class="size-4" />'))
                 ->id()
-                ->class('pg-btn-white dark:ring-pg-primary-600 dark:border-pg-primary-600 dark:hover:bg-pg-primary-700 dark:ring-offset-pg-primary-800 dark:text-pg-primary-300 dark:bg-pg-primary-700')
+                ->class('btn-accion btn-ambar')
+                ->tooltip('Editar empresa')
                 ->dispatch('editar-empresa', ['id' => $row->id]);
         }
 
         if (Gate::allows('empresas.desactivar')) {
             $botones[] = $row->active
                 ? Button::add('estado')
-                    ->slot(Blade::render('<span title="Desactivar"><flux:icon.no-symbol class="size-4" /></span>'))
-                    ->id()
-                    ->class('pg-btn-white text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950')
-                    ->dispatch('confirmar-estado-empresa', ['id' => $row->id])
+                ->slot(Blade::render('<flux:icon.no-symbol class="size-4" />'))
+                ->id()
+                ->class('btn-accion btn-rojo')
+                ->tooltip('Desactivar empresa')
+                ->dispatch('confirmar-estado-empresa', ['id' => $row->id])
                 : Button::add('estado')
-                    ->slot(Blade::render('<span title="Reactivar"><flux:icon.check-circle class="size-4" /></span>'))
-                    ->id()
-                    ->class('pg-btn-white text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950')
-                    ->dispatch('confirmar-estado-empresa', ['id' => $row->id]);
+                ->slot(Blade::render('<flux:icon.check-circle class="size-4" />'))
+                ->id()
+                ->class('btn-accion btn-verde')
+                ->tooltip('Reactivar empresa')
+                ->dispatch('confirmar-estado-empresa', ['id' => $row->id]);
         }
 
         return $botones;

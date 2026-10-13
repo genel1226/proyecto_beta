@@ -58,7 +58,7 @@ final class LicenciasTabla extends PowerGridComponent
         return Licencia::query()
             ->with(['empresa', 'plan'])
             ->withCount([
-                'pagos as renovaciones_count' => fn ($q) => $q->whereNotNull('fecha_vencimiento_anterior'),
+                'pagos as renovaciones_count' => fn($q) => $q->whereNotNull('fecha_vencimiento_anterior'),
             ]);
     }
 
@@ -81,17 +81,17 @@ final class LicenciasTabla extends PowerGridComponent
             ->add('empresa_id')
             ->add('plan_id')
             ->add('codigo_licencia')
-            ->add('codigo_licencia_lower', fn (Licencia $model) => strtolower(e($model->codigo_licencia)))
+            ->add('codigo_licencia_lower', fn(Licencia $model) => strtolower(e($model->codigo_licencia)))
 
             // Nombre de empresa y plan, en vez del id crudo
-            ->add('empresa_nombre', fn (Licencia $model) => e($model->empresa?->razon_social ?? '—'))
-            ->add('plan_nombre', fn (Licencia $model) => e($model->plan?->nombre ?? '—'))
+            ->add('empresa_nombre', fn(Licencia $model) => e($model->empresa?->razon_social ?? '—'))
+            ->add('plan_nombre', fn(Licencia $model) => e($model->plan?->nombre ?? '—'))
 
-            ->add('fecha_inicio_formatted', fn (Licencia $model) => Carbon::parse($model->fecha_inicio)->format('d/m/Y'))
-            ->add('fecha_vencimiento_formatted', fn (Licencia $model) => Carbon::parse($model->fecha_vencimiento)->format('d/m/Y'))
+            ->add('fecha_inicio_formatted', fn(Licencia $model) => Carbon::parse($model->fecha_inicio)->format('d/m/Y'))
+            ->add('fecha_vencimiento_formatted', fn(Licencia $model) => Carbon::parse($model->fecha_vencimiento)->format('d/m/Y'))
 
             // Periodicidad legible en vez del char crudo (M/A/P)
-            ->add('periodicidad_formatted', fn (Licencia $model) => match ($model->periodicidad) {
+            ->add('periodicidad_formatted', fn(Licencia $model) => match ($model->periodicidad) {
                 'M' => 'Mensual',
                 'A' => 'Anual',
                 'P' => 'Personalizada',
@@ -142,7 +142,7 @@ final class LicenciasTabla extends PowerGridComponent
             })
 
             ->add('observaciones')
-            ->add('created_at_formatted', fn (Licencia $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
+            ->add('created_at_formatted', fn(Licencia $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
     }
 
     /**
@@ -284,43 +284,48 @@ final class LicenciasTabla extends PowerGridComponent
         // Cancelada puede necesitar consultarse su historial.
         if (Gate::allows('pagos.index')) {
             $botones[] = Button::add('ver-pagos')
-                ->slot(Blade::render('<span title="Ver pagos"><flux:icon.banknotes class="size-4" /></span>'))
+                ->slot(Blade::render('<flux:icon.banknotes class="size-4" />'))
                 ->id()
-                ->class('pg-btn-white text-zinc-600 border-zinc-300 hover:bg-zinc-50 dark:text-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-800')
+                ->class('btn-accion btn-celeste')
+                ->tooltip('Ver historial de pagos')
                 ->dispatch('ver-pagos', ['rowId' => $row->id]);
         }
 
         if (($vigente || $enProceso) && Gate::allows('licenses.edit')) {
             $botones[] = Button::add('edit')
-                ->slot(Blade::render('<span title="Editar"><flux:icon.pencil-square class="size-4" /></span>'))
+                ->slot(Blade::render('<flux:icon.pencil-square class="size-4" />'))
                 ->id()
-                ->class('pg-btn-white dark:ring-pg-primary-600 dark:border-pg-primary-600 dark:hover:bg-pg-primary-700 dark:ring-offset-pg-primary-800 dark:text-pg-primary-300 dark:bg-pg-primary-700')
+                ->class('btn-accion btn-ambar')
+                ->tooltip('Editar licencia')
                 ->dispatch('edit', ['rowId' => $row->id]);
         }
 
         if ($vigente && Gate::allows('licenses.renovar')) {
             $botones[] = Button::add('renovar')
-                ->slot(Blade::render('<span title="Renovar"><flux:icon.arrow-path class="size-4" /></span>'))
+                ->slot(Blade::render('<flux:icon.arrow-path class="size-4" />'))
                 ->id()
-                ->class('pg-btn-white text-blue-600 border-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950')
+                ->class('btn-accion btn-violeta')
+                ->tooltip('Renovar licencia')
                 ->dispatch('renovar', ['rowId' => $row->id]);
         }
 
         if (($enProceso || $cancelada) && Gate::allows('licenses.activar')) {
-            $titulo = $cancelada ? 'Reactivar' : 'Activar';
+            $titulo = $cancelada ? 'Reactivar licencia' : 'Activar licencia';
 
             $botones[] = Button::add('activar')
-                ->slot(Blade::render('<span title="'.$titulo.'"><flux:icon.check-circle class="size-4" /></span>'))
+                ->slot(Blade::render('<flux:icon.check-circle class="size-4" />'))
                 ->id()
-                ->class('pg-btn-white text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950')
+                ->class('btn-accion btn-verde')
+                ->tooltip($titulo)
                 ->dispatch('activar', ['rowId' => $row->id]);
         }
 
         if (($vigente || $enProceso) && Gate::allows('licenses.baja')) {
             $botones[] = Button::add('baja')
-                ->slot(Blade::render('<span title="Dar de baja"><flux:icon.trash class="size-4" /></span>'))
+                ->slot(Blade::render('<flux:icon.trash class="size-4" />'))
                 ->id()
-                ->class('pg-btn-white text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950')
+                ->class('btn-accion btn-rojo')
+                ->tooltip('Dar de baja la licencia')
                 ->dispatch('baja', ['rowId' => $row->id]);
         }
 

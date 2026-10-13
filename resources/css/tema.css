@@ -201,7 +201,9 @@ body {
     border-bottom: 3px solid var(--kpi-fuerte);
     background: linear-gradient(135deg, var(--kpi-a), var(--kpi-b));
     box-shadow: var(--t-sombra);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 a.kpi:hover {
@@ -250,20 +252,77 @@ a.kpi:hover {
     color: var(--kpi-texto);
 }
 
-.kpi[data-tono="ambar"] { --kpi-a: #fff7de; --kpi-b: #ffedb5; --kpi-fuerte: #b36b00; --kpi-texto: #7a4f00; }
-.kpi[data-tono="rosa"] { --kpi-a: #ffeaf1; --kpi-b: #ffd5e4; --kpi-fuerte: #c0245f; --kpi-texto: #8f1b48; }
-.kpi[data-tono="azul"] { --kpi-a: #e9f2ff; --kpi-b: #d3e6ff; --kpi-fuerte: #2563c9; --kpi-texto: #1b4a9c; }
-.kpi[data-tono="turquesa"] { --kpi-a: #e2f8f5; --kpi-b: #c7efe9; --kpi-fuerte: #0f8f82; --kpi-texto: #0b6b61; }
-.kpi[data-tono="verde"] { --kpi-a: #e4f8ed; --kpi-b: #cdf0dd; --kpi-fuerte: #148a55; --kpi-texto: #0b6b4b; }
+.kpi[data-tono="ambar"] {
+    --kpi-a: #fff7de;
+    --kpi-b: #ffedb5;
+    --kpi-fuerte: #b36b00;
+    --kpi-texto: #7a4f00;
+}
+.kpi[data-tono="rosa"] {
+    --kpi-a: #ffeaf1;
+    --kpi-b: #ffd5e4;
+    --kpi-fuerte: #c0245f;
+    --kpi-texto: #8f1b48;
+}
+.kpi[data-tono="azul"] {
+    --kpi-a: #e9f2ff;
+    --kpi-b: #d3e6ff;
+    --kpi-fuerte: #2563c9;
+    --kpi-texto: #1b4a9c;
+}
+.kpi[data-tono="turquesa"] {
+    --kpi-a: #e2f8f5;
+    --kpi-b: #c7efe9;
+    --kpi-fuerte: #0f8f82;
+    --kpi-texto: #0b6b61;
+}
+.kpi[data-tono="verde"] {
+    --kpi-a: #e4f8ed;
+    --kpi-b: #cdf0dd;
+    --kpi-fuerte: #148a55;
+    --kpi-texto: #0b6b4b;
+}
 
 /* Modo oscuro de las tarjetas de indicadores */
-:root.dark .kpi { --kpi-a: #2a2346; --kpi-b: #342b57; --kpi-fuerte: #7b5bbd; --kpi-texto: #d3c6f3; }
-:root.dark .kpi[data-tono="ambar"] { --kpi-a: #3a2f17; --kpi-b: #463818; --kpi-fuerte: #b87a14; --kpi-texto: #f3d896; }
-:root.dark .kpi[data-tono="rosa"] { --kpi-a: #3b1f2b; --kpi-b: #482536; --kpi-fuerte: #c2386b; --kpi-texto: #f5b9cf; }
-:root.dark .kpi[data-tono="azul"] { --kpi-a: #1d2b46; --kpi-b: #223552; --kpi-fuerte: #3b73d1; --kpi-texto: #bcd5fa; }
-:root.dark .kpi[data-tono="turquesa"] { --kpi-a: #17332f; --kpi-b: #1b3e39; --kpi-fuerte: #17998b; --kpi-texto: #a7e6df; }
-:root.dark .kpi[data-tono="verde"] { --kpi-a: #18342a; --kpi-b: #1c3f31; --kpi-fuerte: #1f9560; --kpi-texto: #b0e8c9; }
-:root.dark .kpi-valor { color: #f6f3ff; }
+:root.dark .kpi {
+    --kpi-a: #2a2346;
+    --kpi-b: #342b57;
+    --kpi-fuerte: #7b5bbd;
+    --kpi-texto: #d3c6f3;
+}
+:root.dark .kpi[data-tono="ambar"] {
+    --kpi-a: #3a2f17;
+    --kpi-b: #463818;
+    --kpi-fuerte: #b87a14;
+    --kpi-texto: #f3d896;
+}
+:root.dark .kpi[data-tono="rosa"] {
+    --kpi-a: #3b1f2b;
+    --kpi-b: #482536;
+    --kpi-fuerte: #c2386b;
+    --kpi-texto: #f5b9cf;
+}
+:root.dark .kpi[data-tono="azul"] {
+    --kpi-a: #1d2b46;
+    --kpi-b: #223552;
+    --kpi-fuerte: #3b73d1;
+    --kpi-texto: #bcd5fa;
+}
+:root.dark .kpi[data-tono="turquesa"] {
+    --kpi-a: #17332f;
+    --kpi-b: #1b3e39;
+    --kpi-fuerte: #17998b;
+    --kpi-texto: #a7e6df;
+}
+:root.dark .kpi[data-tono="verde"] {
+    --kpi-a: #18342a;
+    --kpi-b: #1c3f31;
+    --kpi-fuerte: #1f9560;
+    --kpi-texto: #b0e8c9;
+}
+:root.dark .kpi-valor {
+    color: #f6f3ff;
+}
 
 /* ============================================================================
    RED DE SEGURIDAD
@@ -298,6 +357,164 @@ a.kpi:hover {
     display: flex !important;
 }
 
-[data-flux-sidebar-collapsed-desktop] [data-flux-sidebar-group] > div.truncate:first-child {
+[data-flux-sidebar-collapsed-desktop]
+    [data-flux-sidebar-group]
+    > div.truncate:first-child {
     display: none;
+}
+
+/* ============================================================================
+   Logo de Software4tech en el menú (componente components/app-logo.blade.php)
+   - Menú expandido:  el nombre completo (versión oscura o clara según el modo).
+   - Menú minimizado: solo el "4", dentro de una baldosa blanca para que se lea en cualquier modo.
+   Flux le pone al menú el atributo data-flux-sidebar-collapsed-desktop cuando está minimizado.
+   ============================================================================ */
+.logo-menu {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.logo-completo-claro,
+.logo-completo-oscuro {
+    height: 2rem;
+    width: auto;
+    max-width: 100%;
+}
+
+.logo-completo-oscuro,
+.logo-icono {
+    display: none;
+}
+
+.logo-icono {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0.3rem;
+    border-radius: 0.6rem;
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px var(--t-borde);
+    object-fit: contain;
+}
+
+:root.dark .logo-completo-claro {
+    display: none;
+}
+
+:root.dark .logo-completo-oscuro {
+    display: block;
+}
+
+[data-flux-sidebar-collapsed-desktop] .logo-completo-claro,
+[data-flux-sidebar-collapsed-desktop] .logo-completo-oscuro {
+    display: none !important;
+}
+
+[data-flux-sidebar-collapsed-desktop] .logo-icono {
+    display: block;
+}
+
+/* ============================================================================
+   Botones de acción de las tablas (PowerGrid). Cada función tiene su color:
+     celeste = ver pagos | ámbar = editar | violeta = renovar y permisos
+     verde = activar / reactivar | rojo = desactivar / dar de baja
+   Están definidos aquí, en CSS normal, y no con clases de Tailwind dentro de los *Tabla.php:
+   Tailwind solo genera las clases que encuentra en los archivos que escanea, y esos no se escanean.
+   ============================================================================ */
+.btn-accion {
+    --b-fondo: #f3f4f6;
+    --b-borde: #d1d5db;
+    --b-icono: #4b5563;
+    --b-hover: #e5e7eb;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    margin: 0 0.125rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--b-borde);
+    background: var(--b-fondo);
+    color: var(--b-icono);
+    cursor: pointer;
+    transition:
+        background-color 0.15s ease,
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.btn-accion:hover {
+    background: var(--b-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(45, 27, 88, 0.14);
+}
+
+.btn-accion:focus-visible {
+    outline: 2px solid var(--b-icono);
+    outline-offset: 2px;
+}
+
+.btn-celeste {
+    --b-fondo: #e0f2fe;
+    --b-borde: #bae6fd;
+    --b-icono: #0369a1;
+    --b-hover: #bae6fd;
+}
+.btn-ambar {
+    --b-fondo: #fef3c7;
+    --b-borde: #fcd34d;
+    --b-icono: #b45309;
+    --b-hover: #fde68a;
+}
+.btn-violeta {
+    --b-fondo: #ede9fe;
+    --b-borde: #c4b5fd;
+    --b-icono: #6d28d9;
+    --b-hover: #ddd6fe;
+}
+.btn-verde {
+    --b-fondo: #d1fae5;
+    --b-borde: #6ee7b7;
+    --b-icono: #047857;
+    --b-hover: #a7f3d0;
+}
+.btn-rojo {
+    --b-fondo: #fee2e2;
+    --b-borde: #fca5a5;
+    --b-icono: #b91c1c;
+    --b-hover: #fecaca;
+}
+
+:root.dark .btn-celeste {
+    --b-fondo: rgba(56, 189, 248, 0.14);
+    --b-borde: rgba(56, 189, 248, 0.4);
+    --b-icono: #7dd3fc;
+    --b-hover: rgba(56, 189, 248, 0.26);
+}
+:root.dark .btn-ambar {
+    --b-fondo: rgba(251, 191, 36, 0.14);
+    --b-borde: rgba(251, 191, 36, 0.4);
+    --b-icono: #fcd34d;
+    --b-hover: rgba(251, 191, 36, 0.26);
+}
+:root.dark .btn-violeta {
+    --b-fondo: rgba(167, 139, 250, 0.16);
+    --b-borde: rgba(167, 139, 250, 0.4);
+    --b-icono: #c4b5fd;
+    --b-hover: rgba(167, 139, 250, 0.28);
+}
+:root.dark .btn-verde {
+    --b-fondo: rgba(52, 211, 153, 0.14);
+    --b-borde: rgba(52, 211, 153, 0.4);
+    --b-icono: #6ee7b7;
+    --b-hover: rgba(52, 211, 153, 0.26);
+}
+:root.dark .btn-rojo {
+    --b-fondo: rgba(248, 113, 113, 0.14);
+    --b-borde: rgba(248, 113, 113, 0.4);
+    --b-icono: #fca5a5;
+    --b-hover: rgba(248, 113, 113, 0.26);
 }

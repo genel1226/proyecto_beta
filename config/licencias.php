@@ -18,6 +18,8 @@ return [
     | Correo interno de Software4tech. Recibe copia oculta de cada alerta.
     */
     'correo_interno' => env('LICENCIAS_CORREO_INTERNO'),
+    'contacto_telefono' => env('LICENCIAS_CONTACTO_TELEFONO'),
+    'contacto_web' => env('LICENCIAS_CONTACTO_WEB'),
 
     /*
     | Duración por defecto de una cuenta demo, en días.

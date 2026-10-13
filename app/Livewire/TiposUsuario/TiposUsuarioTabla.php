@@ -130,23 +130,26 @@ final class TiposUsuarioTabla extends PowerGridComponent
 
         if (Gate::allows('tipos_usuario.edit')) {
             $botones[] = Button::add('edit')
-                ->slot(Blade::render('<span title="Editar"><flux:icon.pencil-square class="size-4" /></span>'))
+                ->slot(Blade::render('<flux:icon.pencil-square class="size-4" />'))
                 ->id()
-                ->class('pg-btn-white dark:ring-pg-primary-600 dark:border-pg-primary-600 dark:hover:bg-pg-primary-700 dark:ring-offset-pg-primary-800 dark:text-pg-primary-300 dark:bg-pg-primary-700')
+                ->class('btn-accion btn-ambar')
+                ->tooltip('Editar tipo de usuario')
                 ->dispatch('editar-tipo-usuario', ['id' => $row->id]);
         }
 
         if (Gate::allows('tipos_usuario.desactivar')) {
             $botones[] = $row->activo
                 ? Button::add('estado')
-                ->slot(Blade::render('<span title="Desactivar"><flux:icon.no-symbol class="size-4" /></span>'))
+                ->slot(Blade::render('<flux:icon.no-symbol class="size-4" />'))
                 ->id()
-                ->class('pg-btn-white text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950')
+                ->class('btn-accion btn-rojo')
+                ->tooltip('Desactivar tipo de usuario')
                 ->dispatch('confirmar-estado-tipo-usuario', ['id' => $row->id])
                 : Button::add('estado')
-                ->slot(Blade::render('<span title="Reactivar"><flux:icon.check-circle class="size-4" /></span>'))
+                ->slot(Blade::render('<flux:icon.check-circle class="size-4" />'))
                 ->id()
-                ->class('pg-btn-white text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950')
+                ->class('btn-accion btn-verde')
+                ->tooltip('Reactivar tipo de usuario')
                 ->dispatch('confirmar-estado-tipo-usuario', ['id' => $row->id]);
         }
 
