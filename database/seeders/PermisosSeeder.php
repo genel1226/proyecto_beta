@@ -78,6 +78,16 @@ class PermisosSeeder extends Seeder
             ],
         ],
 
+        'GESTION DE PLANES' => [
+            'en' => 'PLAN MANAGEMENT',
+            'permisos' => [
+                ['planes.index', '1', 'Ver el catálogo de planes y sus montos', 'View the plans catalog'],
+                ['planes.create', '2', 'Crear planes', 'Create plans'],
+                ['planes.edit', '2', 'Editar planes (monto, tipo y mínimo de usuarios)', 'Edit plans'],
+                ['planes.eliminar', '2', 'Eliminar planes que ninguna licencia usa', 'Delete unused plans'],
+            ],
+        ],
+
         'GESTION DE PAGOS' => [
             'en' => 'PAYMENT MANAGEMENT',
             'permisos' => [
@@ -92,6 +102,13 @@ class PermisosSeeder extends Seeder
                 ['reportes.index', '1', 'Entrar a la sección de reportes', 'Access the reports section'],
                 ['reportes.montos', '1', 'Ver montos dentro de los reportes', 'View amounts inside reports'],
                 ['reportes.export', '1', 'Exportar reportes a Excel y PDF', 'Export reports to Excel and PDF'],
+            ],
+        ],
+
+        'REPORTES DE DECISION' => [
+            'en' => 'DECISION REPORTS',
+            'permisos' => [
+                ['decisiones.index', '1', 'Entrar a los reportes de decisión (riesgo, retención, vendedores…)', 'Access the decision reports'],
             ],
         ],
 
@@ -121,7 +138,7 @@ class PermisosSeeder extends Seeder
      * "switches" por usuario; ahora son Roles y Usuarios). Se desactivan para que no
      * aparezcan en las pantallas; no se borran.
      */
-    private const OBSOLETOS = ['permisos.admin', 'GESTION DE PERMISOS'];
+    private const OBSOLETOS = ['permisos.admin', 'GESTION DE PERMISOS', 'beneficios.index', 'beneficios.edit'];
 
     /**
      * Roles base del personal interno (empresa_id = 0).
@@ -152,9 +169,11 @@ class PermisosSeeder extends Seeder
                 'pagos.index',
                 'pagos.create',
                 'tipos_usuario.index',
+                'planes.index',
                 'reportes.index',
                 'reportes.montos',
                 'reportes.export',
+                'decisiones.index',
             ],
         ],
 

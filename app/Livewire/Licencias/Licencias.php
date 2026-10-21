@@ -175,6 +175,35 @@ class Licencias extends Component
     }
 
     /**
+     * Al cambiar de plan puede cambiar el mínimo de usuarios que se exige:
+     * se actualiza el aviso al instante.
+     */
+    public function updatedPlanId(): void
+    {
+        $this->refrescarErrorDetalle();
+    }
+
+    /**
+     * Mínimo de usuarios que exige el plan elegido (plans.cantidad_min).
+     * 0 = el plan no exige mínimo.
+     */
+    private function minimoUsuarios(): int
+    {
+        return $this->plan_id
+            ? max((int) (Plan::whereKey($this->plan_id)->value('cantidad_min') ?? 0), 0)
+            : 0;
+    }
+
+    /**
+     * Cuántos usuarios hacen falta para que una licencia Vigente / Por vencer
+     * sea válida: siempre al menos 1, o el mínimo del plan si es mayor.
+     */
+    private function minimoRequerido(): int
+    {
+        return max(1, $this->minimoUsuarios());
+    }
+
+    /**
      * Quita (o deja) el error de "falta al menos un usuario" apenas
      * cambia la cantidad o el estado — así el aviso desaparece en cuanto
      * se corrige, sin que el usuario tenga que volver a apretar Guardar.
@@ -191,7 +220,7 @@ class Licencias extends Component
             : $this->estado_inicial;
 
         $necesitaUsuarios = in_array($estadoRelevante, ['V', 'X'], true);
-        $tieneUsuarios = array_sum($this->cantidades) >= 1;
+        $tieneUsuarios = array_sum($this->cantidades) >= $this->minimoRequerido();
 
         if (! $necesitaUsuarios || $tieneUsuarios) {
             $this->resetErrorBag('detalle');
@@ -216,7 +245,8 @@ class Licencias extends Component
             && $this->start_date !== ''
             && $this->end_date !== '';
 
-        $usuariosOk = ! in_array($estadoRelevante, ['V', 'X'], true) || array_sum($this->cantidades) >= 1;
+        $usuariosOk = ! in_array($estadoRelevante, ['V', 'X'], true)
+            || array_sum($this->cantidades) >= $this->minimoRequerido();
 
         return $basicosCompletos && $usuariosOk && $this->getErrorBag()->isEmpty();
     }
@@ -434,7 +464,7 @@ class Licencias extends Component
      * Único lugar donde se calcula el monto. La vista solo lo muestra.
      *
      * @param  array<int, array{id:int, codigo:string, nombre:string, precio:float, cantidad:int}>  $tipos
-     * @return array{plan_nombre:?string, plan_monto:float, subtotal_usuarios:float, descuento:float, total:float, cantidad_total:int}
+     * @return array{plan_nombre:?string, plan_monto:float, subtotal_usuarios:float, descuento:float, total:float, cantidad_total:int, minimo_usuarios:int, faltan:int}
      */
     private function calcular(array $tipos): array
     {
@@ -442,6 +472,8 @@ class Licencias extends Component
         $planMonto = (float) ($plan->monto ?? 0);
         $subtotal = (float) collect($tipos)->sum(fn(array $t) => $t['cantidad'] * $t['precio']);
         $descuento = $this->descuentoEfectivo();
+        $cantidadTotal = (int) collect($tipos)->sum('cantidad');
+        $minimo = max((int) ($plan->cantidad_min ?? 0), 0);
 
         return [
             'plan_nombre' => $plan?->nombre,
@@ -449,7 +481,9 @@ class Licencias extends Component
             'subtotal_usuarios' => $subtotal,
             'descuento' => $descuento,
             'total' => max($planMonto + $subtotal - $descuento, 0),
-            'cantidad_total' => (int) collect($tipos)->sum('cantidad'),
+            'cantidad_total' => $cantidadTotal,
+            'minimo_usuarios' => $minimo,
+            'faltan' => max($minimo - $cantidadTotal, 0),
         ];
     }
 
@@ -507,8 +541,12 @@ class Licencias extends Component
         $tipos = $this->tiposConPrecio();
         $calculo = $this->calcular($tipos);
 
-        if (in_array($estadoRelevante, ['V', 'X'], true) && $calculo['cantidad_total'] < 1) {
-            $this->addError('detalle', 'Una licencia Vigente o Por vencer necesita al menos un usuario.');
+        if (in_array($estadoRelevante, ['V', 'X'], true) && $calculo['cantidad_total'] < $this->minimoRequerido()) {
+            $minimo = $this->minimoUsuarios();
+
+            $this->addError('detalle', $minimo > 1
+                ? "Este plan necesita mínimo {$minimo} usuarios (ahora tienes {$calculo['cantidad_total']})."
+                : 'Una licencia Vigente o Por vencer necesita al menos un usuario.');
 
             return;
         }
@@ -832,8 +870,13 @@ class Licencias extends Component
             return "La licencia {$codigo} ya venció el {$licencia->fecha_vencimiento->format('d/m/Y')}. Crea una licencia nueva.";
         }
 
-        if ($licencia->detalleUsuarios()->sum('cantidad') < 1) {
-            return "La licencia {$codigo} no tiene usuarios. Edítala y agrega al menos uno.";
+        $minimo = max(1, (int) ($licencia->plan?->cantidad_min ?? 0));
+        $usuarios = (int) $licencia->detalleUsuarios()->sum('cantidad');
+
+        if ($usuarios < $minimo) {
+            return $minimo > 1
+                ? "La licencia {$codigo} necesita mínimo {$minimo} usuarios por su plan y tiene {$usuarios}. Edítala y completa los que faltan."
+                : "La licencia {$codigo} no tiene usuarios. Edítala y agrega al menos uno.";
         }
 
         $otraActiva = ModelsLicencias::where('empresa_id', $licencia->empresa_id)
@@ -978,7 +1021,13 @@ class Licencias extends Component
             ];
         }
 
+        // ¿La licencia que se está armando exige usuarios (Vigente / Por vencer)?
+        $estadoRelevante = $this->licencia_id
+            ? ModelsLicencias::find($this->licencia_id)?->estado
+            : $this->estado_inicial;
+
         return view('livewire.licencias.licencias', [
+            'exigeUsuarios' => in_array($estadoRelevante, ['V', 'X'], true),
             'empresas' => Empresa::orderBy('razon_social')->get(),
             'planes' => Plan::primarios()->orderBy('monto')->get(),
             'tipos' => $tipos,

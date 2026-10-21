@@ -54,15 +54,22 @@
                 </flux:sidebar.item>
             @endcan
 
+            {{-- Reportes: una sola entrada. Abre "Ventas y pagos" o, si solo tiene el otro permiso, "Toma de
+                 decisiones". Dentro de la pantalla hay un selector entre las dos (x-reportes-titulo). --}}
             @can('reportes.index')
-                <flux:sidebar.item icon="chart-bar" :href="route('reportes')" :current="request()->routeIs('reportes')"
-                    wire:navigate>
+                <flux:sidebar.item icon="chart-bar" :href="route('reportes')"
+                    :current="request()->routeIs('reportes', 'decisiones')" wire:navigate>
+                    {{ __('Reportes') }}
+                </flux:sidebar.item>
+            @elsecan('decisiones.index')
+                <flux:sidebar.item icon="chart-bar" :href="route('decisiones')"
+                    :current="request()->routeIs('reportes', 'decisiones')" wire:navigate>
                     {{ __('Reportes') }}
                 </flux:sidebar.item>
             @endcan
 
             {{-- Administración: solo aparece si el usuario puede ver al menos una de sus opciones --}}
-            @canany(['tipos_usuario.index', 'usuarios.index', 'roles.index'])
+            @canany(['tipos_usuario.index', 'planes.index', 'usuarios.index', 'roles.index'])
                 <div class="menu-seccion menu-seccion-2">Administración</div>
                 <div class="menu-separador"></div>
 
@@ -70,6 +77,13 @@
                     <flux:sidebar.item icon="user-group" :href="route('tipos-usuario')"
                         :current="request()->routeIs('tipos-usuario')" wire:navigate>
                         {{ __('Tipos de usuario') }}
+                    </flux:sidebar.item>
+                @endcan
+
+                @can('planes.index')
+                    <flux:sidebar.item icon="rectangle-stack" :href="route('planes')"
+                        :current="request()->routeIs('planes')" wire:navigate>
+                        {{ __('Planes') }}
                     </flux:sidebar.item>
                 @endcan
 

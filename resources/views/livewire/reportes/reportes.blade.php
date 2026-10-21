@@ -1,5 +1,5 @@
 <div>
-    <x-pagina-titulo icono="chart-bar" titulo="Reportes" />
+    <x-reportes-titulo actual="reportes" />
 
     {{-- Filtros --}}
     <div class="tarjeta mb-6">

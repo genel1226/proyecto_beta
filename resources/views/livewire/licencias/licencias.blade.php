@@ -83,6 +83,10 @@
                                 <flux:radio value="{{ $plan->id }}" class="flex-1">
                                     <div class="text-center">
                                         <div class="font-semibold">{{ $plan->nombre }}</div>
+                                        @if ((int) $plan->cantidad_min > 1)
+                                            <div class="text-xs text-amber-600 dark:text-amber-400">
+                                                mín. {{ $plan->cantidad_min }} usuarios</div>
+                                        @endif
                                         @if ($verPrecios)
                                             <div class="text-xs text-zinc-500">
                                                 ${{ number_format($plan->monto, 2) }} base</div>
@@ -156,6 +160,40 @@
                                 </div>
                             @endforeach
                         </div>
+
+                        {{-- Plan con mínimo de usuarios (ej. "paquete 21"): avance hacia el mínimo --}}
+                        @if ($calculo['minimo_usuarios'] > 1)
+                            @php
+                                $minimo = $calculo['minimo_usuarios'];
+                                $total = $calculo['cantidad_total'];
+                                $pct = min(100, (int) round($total / $minimo * 100));
+                            @endphp
+
+                            @if ($calculo['faltan'] === 0)
+                                <div
+                                    class="mt-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-4 text-sm text-emerald-800 dark:text-emerald-300">
+                                    <strong>Mínimo cumplido:</strong> {{ $total }} de {{ $minimo }} usuarios.
+                                </div>
+                            @elseif ($exigeUsuarios)
+                                <div
+                                    class="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200">
+                                    <strong>Este plan necesita mínimo {{ $minimo }} usuarios.</strong>
+                                    Ahora tienes {{ $total }}, te faltan <strong>{{ $calculo['faltan'] }}</strong>
+                                    para poder guardar la licencia.
+                                    <div class="h-2 mt-3 rounded-full bg-amber-200 dark:bg-amber-900 overflow-hidden">
+                                        <div class="h-full rounded-full bg-amber-500" style="width: {{ $pct }}%"></div>
+                                    </div>
+                                    <div class="text-xs mt-1">{{ $total }} de {{ $minimo }}</div>
+                                </div>
+                            @else
+                                <div
+                                    class="mt-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 p-4 text-sm text-blue-900 dark:text-blue-200">
+                                    Este plan necesita mínimo <strong>{{ $minimo }}</strong> usuarios para poder
+                                    activarse. Ahora tienes {{ $total }}. Mientras esté En proceso puedes dejarlo
+                                    incompleto.
+                                </div>
+                            @endif
+                        @endif
 
                         @error('detalle')
                             <flux:error>{{ $message }}</flux:error>
@@ -237,8 +275,12 @@
                 @endif
             </div>
 
-            <div class="flex">
+            <div class="flex items-center gap-3">
                 <flux:spacer />
+                @if ($exigeUsuarios && $calculo['minimo_usuarios'] > 1 && $calculo['faltan'] > 0)
+                    <flux:text class="text-xs">El botón se activa al llegar a {{ $calculo['minimo_usuarios'] }}
+                        usuarios.</flux:text>
+                @endif
                 <flux:button type="button" wire:click="guardar" variant="primary"
                     :disabled="! $this->puedeGuardar">
                     {{ $licencia_id ? 'Guardar cambios' : 'Guardar licencia' }}

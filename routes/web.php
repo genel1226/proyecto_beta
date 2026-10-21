@@ -1,9 +1,11 @@
 <?php
 
 use App\Livewire\Dashboard\Dashboard;
+use App\Livewire\Decisiones\Decisiones;
 use App\Livewire\Empresas\Empresas;
 use App\Livewire\Licencias\Licencias;
 use App\Livewire\Pagos\Pagos;
+use App\Livewire\Planes\Planes;
 use App\Livewire\Reportes\Reportes;
 use App\Livewire\Roles\Roles;
 use App\Livewire\TiposUsuario\TiposUsuario;
@@ -23,7 +25,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('empresas', Empresas::class)->name('empresas');
     Route::livewire('pagos', Pagos::class)->name('pagos');
     Route::livewire('reportes', Reportes::class)->name('reportes');
+    Route::livewire('decisiones', Decisiones::class)->name('decisiones');
     Route::livewire('tipos-usuario', TiposUsuario::class)->name('tipos-usuario');
+    Route::livewire('planes', Planes::class)->name('planes');
     Route::livewire('usuarios', Usuarios::class)->name('usuarios');
     Route::livewire('roles', Roles::class)->name('roles');
 });

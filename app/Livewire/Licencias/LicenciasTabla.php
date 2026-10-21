@@ -155,6 +155,9 @@ final class LicenciasTabla extends PowerGridComponent
     {
         return [
             // Column::make('Id', 'id'),
+            Column::make('Codigo licencia', 'codigo_licencia')
+                ->sortable()
+                ->searchable(),
 
             Column::make('Empresa', 'empresa_nombre')
                 ->sortable()
@@ -164,9 +167,6 @@ final class LicenciasTabla extends PowerGridComponent
                 ->sortable()
                 ->searchable(),
 
-            Column::make('Codigo licencia', 'codigo_licencia')
-                ->sortable()
-                ->searchable(),
 
             Column::make('Fecha inicio', 'fecha_inicio_formatted', 'fecha_inicio')
                 ->sortable(),

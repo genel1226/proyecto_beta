@@ -1,6 +1,7 @@
 /*
  * ============================================================================
- *  TEMA VISUAL: menú y encabezado flotantes, franja violeta y tarjetas.
+ *  TEMA VISUAL "Marino y plata": menú azul marino, contenido gris claro, tarjetas
+ *  blancas sobrias. Sin franja ni degradados; el color solo marca estado y acciones.
  *
  *  Todo el aspecto nuevo vive en ESTE archivo. Para volver al estilo anterior
  *  basta con quitar la línea  @import "./tema.css";  de app.css y recompilar.
@@ -9,25 +10,39 @@
 
 /* ---------- Variables (claro y oscuro) ---------- */
 :root {
-    --t-fondo: #f3f0fa;
+    --t-fondo: #f3f4f6;
     --t-tarjeta: #ffffff;
-    --t-borde: #ece7f6;
-    --t-sombra: 0 8px 24px rgba(45, 27, 88, 0.1);
-    --t-sombra-fuerte: 0 10px 30px rgba(45, 27, 88, 0.16);
-    --t-franja: linear-gradient(120deg, #4a3280 0%, #6d4aa8 55%, #9b7fd0 100%);
-    --t-activo: #ece6f8;
-    --t-icono-bg: #ece6f8;
+    --t-borde: #e3e6ec;
+    --t-sombra: 0 1px 2px rgba(15, 31, 61, 0.06);
+    --t-sombra-fuerte: 0 2px 8px rgba(15, 31, 61, 0.08);
+    --t-texto-fuerte: #0f1f3d;
+    --t-muted: #64748b;
+    --t-dorado: #b8893b;
+    --t-icono-bg: #e8eefc;
+    --t-icono-fg: #1e3a8a;
+
+    /* Menú lateral */
+    --t-menu: #0f1f3d;
+    --t-menu-texto: #bfc9dc;
+    --t-menu-titulo: #7f8ead;
+    --t-menu-hover: rgba(255, 255, 255, 0.07);
+    --t-menu-linea: rgba(255, 255, 255, 0.14);
+    --t-activo: #1d3260;
 }
 
 :root.dark {
-    --t-fondo: #13101d;
-    --t-tarjeta: #1c1830;
-    --t-borde: #2c2647;
-    --t-sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
-    --t-sombra-fuerte: 0 10px 30px rgba(0, 0, 0, 0.45);
-    --t-franja: linear-gradient(120deg, #1b1432 0%, #2d2257 55%, #46377f 100%);
-    --t-activo: rgba(162, 138, 216, 0.18);
-    --t-icono-bg: rgba(162, 138, 216, 0.16);
+    --t-fondo: #0b1220;
+    --t-tarjeta: #151c2c;
+    --t-borde: #263046;
+    --t-sombra: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --t-sombra-fuerte: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --t-texto-fuerte: #f1f5f9;
+    --t-muted: #94a3b8;
+    --t-icono-bg: rgba(96, 165, 250, 0.14);
+    --t-icono-fg: #93b4f5;
+
+    --t-menu: #0a1426;
+    --t-activo: #1d3260;
 }
 
 body {
@@ -42,8 +57,8 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: 19rem;
-    background: var(--t-franja);
+    height: 0;
+    display: none; /* la franja ya no se usa: el fondo es gris liso */
     z-index: 0;
     pointer-events: none;
 }
@@ -69,8 +84,8 @@ body {
     padding-inline: 1rem;
     min-height: 4rem;
     background: var(--t-tarjeta);
-    border: 0;
-    border-radius: 1.1rem;
+    border: 1px solid var(--t-borde);
+    border-radius: 0.75rem;
     box-shadow: var(--t-sombra-fuerte);
 }
 
@@ -103,9 +118,9 @@ body {
         max-height: calc(100dvh - 2rem) !important;
 
         margin: 1rem 0 1rem 1rem;
-        background: var(--t-tarjeta);
+        background: var(--t-menu);
         border: 0;
-        border-radius: 1.25rem;
+        border-radius: 0.75rem;
         box-shadow: var(--t-sombra-fuerte);
     }
 
@@ -127,7 +142,7 @@ body {
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #a3a3a3;
+    color: var(--t-menu-titulo);
 }
 
 .menu-seccion-2 {
@@ -138,7 +153,7 @@ body {
     display: none;
     height: 1px;
     margin: 0.75rem 0.25rem;
-    background: var(--t-borde);
+    background: var(--t-menu-linea);
 }
 
 [data-flux-sidebar-collapsed-desktop] .menu-seccion {
@@ -149,18 +164,34 @@ body {
     display: block;
 }
 
-/* Ítem activo del menú: fondo lila y texto en el color de acento */
+/* Ítems del menú: texto claro sobre el azul marino */
+[data-flux-sidebar-item] {
+    color: var(--t-menu-texto);
+}
+
+[data-flux-sidebar-item] [data-flux-icon] {
+    color: currentColor;
+}
+
+[data-flux-sidebar-item]:hover {
+    background: var(--t-menu-hover);
+    color: #ffffff;
+}
+
+/* Ítem activo: fondo azul más claro, texto blanco y una marca dorada a la izquierda */
 [data-flux-sidebar-item][data-current] {
     background: var(--t-activo);
     border-color: transparent;
-    color: var(--color-accent-content);
+    color: #ffffff;
     font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--t-dorado);
 }
 
 /* ---------- Tarjetas ---------- */
 .tarjeta {
     background: var(--t-tarjeta);
-    border-radius: 1rem;
+    border: 1px solid var(--t-borde);
+    border-radius: 0.75rem;
     box-shadow: var(--t-sombra);
     padding: 1.25rem;
 }
@@ -168,7 +199,8 @@ body {
 /* Tarjeta del título de cada página (ícono + título + botones) */
 .tarjeta-titulo {
     background: var(--t-tarjeta);
-    border-radius: 1.1rem;
+    border: 1px solid var(--t-borde);
+    border-radius: 0.75rem;
     box-shadow: var(--t-sombra-fuerte);
     padding: 0.9rem 1.4rem;
 }
@@ -177,29 +209,29 @@ body {
     flex: none;
     display: grid;
     place-items: center;
-    width: 3.25rem;
-    height: 3.25rem;
-    border-radius: 0.9rem;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.6rem;
     background: var(--t-icono-bg);
-    color: var(--color-accent-content);
+    color: var(--t-icono-fg);
 }
 
-/* ---------- Tarjetas de indicadores: fondo suave + ícono en el color fuerte del mismo tono ----------
-   El color significa algo (igual que las etiquetas de estado): ámbar = por vencer, rosa = vencida,
-   azul = en proceso, verde = dinero. Violeta es el color de la marca. */
+/* ---------- Tarjetas de indicadores ----------
+   Tarjeta blanca con el ícono en una baldosa del color del tono. El color significa algo:
+   ámbar = atención, rosa = problema, azul = en proceso, verde = dinero / bien, turquesa = neutro positivo.
+   Sin tono, el indicador va en azul marino (color de la marca). */
 .kpi {
-    --kpi-a: #f1ecfc;
-    --kpi-b: #e3d9f7;
-    --kpi-fuerte: #6d4aa8;
-    --kpi-texto: #4a3280;
+    --kpi-a: #e8eefc;
+    --kpi-fuerte: #1e3a8a;
+    --kpi-texto: var(--t-muted);
 
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-radius: 0.875rem;
-    border-bottom: 3px solid var(--kpi-fuerte);
-    background: linear-gradient(135deg, var(--kpi-a), var(--kpi-b));
+    gap: 0.875rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--t-borde);
+    background: var(--t-tarjeta);
     box-shadow: var(--t-sombra);
     transition:
         transform 0.15s ease,
@@ -207,7 +239,7 @@ body {
 }
 
 a.kpi:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: var(--t-sombra-fuerte);
 }
 
@@ -215,35 +247,34 @@ a.kpi:hover {
     flex: none;
     display: grid;
     place-items: center;
-    width: 3rem;
-    height: 3rem;
-    border-radius: 9999px;
-    color: #ffffff;
-    background: var(--kpi-fuerte);
-    box-shadow: 0 6px 12px rgba(31, 26, 51, 0.18);
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.6rem;
+    color: var(--kpi-fuerte);
+    background: var(--kpi-a);
 }
 
 .kpi-texto {
     flex: 1 1 auto;
     min-width: 0;
     display: grid;
-    text-align: center;
+    text-align: left;
     line-height: 1.2;
 }
 
 .kpi-etiqueta {
     font-size: 0.6875rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--kpi-texto);
 }
 
 .kpi-valor {
-    font-size: 1.75rem;
+    font-size: 1.6rem;
     font-weight: 700;
     line-height: 1.15;
-    color: #1f1a33;
+    color: var(--t-texto-fuerte);
     font-variant-numeric: tabular-nums;
 }
 
@@ -253,75 +284,59 @@ a.kpi:hover {
 }
 
 .kpi[data-tono="ambar"] {
-    --kpi-a: #fff7de;
-    --kpi-b: #ffedb5;
-    --kpi-fuerte: #b36b00;
-    --kpi-texto: #7a4f00;
+    --kpi-a: #fef3c7;
+    --kpi-fuerte: #b45309;
 }
 .kpi[data-tono="rosa"] {
-    --kpi-a: #ffeaf1;
-    --kpi-b: #ffd5e4;
-    --kpi-fuerte: #c0245f;
-    --kpi-texto: #8f1b48;
+    --kpi-a: #fde8ef;
+    --kpi-fuerte: #be185d;
 }
 .kpi[data-tono="azul"] {
-    --kpi-a: #e9f2ff;
-    --kpi-b: #d3e6ff;
-    --kpi-fuerte: #2563c9;
-    --kpi-texto: #1b4a9c;
+    --kpi-a: #e0ecff;
+    --kpi-fuerte: #2563eb;
 }
 .kpi[data-tono="turquesa"] {
-    --kpi-a: #e2f8f5;
-    --kpi-b: #c7efe9;
-    --kpi-fuerte: #0f8f82;
-    --kpi-texto: #0b6b61;
+    --kpi-a: #dcf5f1;
+    --kpi-fuerte: #0f766e;
 }
 .kpi[data-tono="verde"] {
-    --kpi-a: #e4f8ed;
-    --kpi-b: #cdf0dd;
-    --kpi-fuerte: #148a55;
-    --kpi-texto: #0b6b4b;
+    --kpi-a: #dcf5e6;
+    --kpi-fuerte: #15803d;
+}
+/* "violeta" quedó de la marca anterior: ahora es el azul marino de siempre */
+.kpi[data-tono="violeta"] {
+    --kpi-a: #e8eefc;
+    --kpi-fuerte: #1e3a8a;
 }
 
 /* Modo oscuro de las tarjetas de indicadores */
 :root.dark .kpi {
-    --kpi-a: #2a2346;
-    --kpi-b: #342b57;
-    --kpi-fuerte: #7b5bbd;
-    --kpi-texto: #d3c6f3;
+    --kpi-a: rgba(96, 165, 250, 0.14);
+    --kpi-fuerte: #93b4f5;
 }
 :root.dark .kpi[data-tono="ambar"] {
-    --kpi-a: #3a2f17;
-    --kpi-b: #463818;
-    --kpi-fuerte: #b87a14;
-    --kpi-texto: #f3d896;
+    --kpi-a: rgba(251, 191, 36, 0.14);
+    --kpi-fuerte: #fbbf24;
 }
 :root.dark .kpi[data-tono="rosa"] {
-    --kpi-a: #3b1f2b;
-    --kpi-b: #482536;
-    --kpi-fuerte: #c2386b;
-    --kpi-texto: #f5b9cf;
+    --kpi-a: rgba(244, 114, 182, 0.14);
+    --kpi-fuerte: #f9a8d4;
 }
 :root.dark .kpi[data-tono="azul"] {
-    --kpi-a: #1d2b46;
-    --kpi-b: #223552;
-    --kpi-fuerte: #3b73d1;
-    --kpi-texto: #bcd5fa;
+    --kpi-a: rgba(59, 130, 246, 0.16);
+    --kpi-fuerte: #7fb0fb;
 }
 :root.dark .kpi[data-tono="turquesa"] {
-    --kpi-a: #17332f;
-    --kpi-b: #1b3e39;
-    --kpi-fuerte: #17998b;
-    --kpi-texto: #a7e6df;
+    --kpi-a: rgba(45, 212, 191, 0.14);
+    --kpi-fuerte: #5eead4;
 }
 :root.dark .kpi[data-tono="verde"] {
-    --kpi-a: #18342a;
-    --kpi-b: #1c3f31;
-    --kpi-fuerte: #1f9560;
-    --kpi-texto: #b0e8c9;
+    --kpi-a: rgba(52, 211, 153, 0.14);
+    --kpi-fuerte: #6ee7b7;
 }
-:root.dark .kpi-valor {
-    color: #f6f3ff;
+:root.dark .kpi[data-tono="violeta"] {
+    --kpi-a: rgba(96, 165, 250, 0.14);
+    --kpi-fuerte: #93b4f5;
 }
 
 /* ============================================================================
@@ -382,27 +397,23 @@ a.kpi:hover {
     max-width: 100%;
 }
 
-.logo-completo-oscuro,
-.logo-icono {
+/* El menú es azul marino en claro y oscuro: se usa siempre la versión del logo para fondo oscuro. */
+.logo-completo-claro {
     display: none;
 }
 
+.logo-completo-oscuro {
+    display: block;
+}
+
 .logo-icono {
+    display: none;
     width: 2.25rem;
     height: 2.25rem;
     padding: 0.3rem;
-    border-radius: 0.6rem;
+    border-radius: 0.5rem;
     background: #ffffff;
-    box-shadow: inset 0 0 0 1px var(--t-borde);
     object-fit: contain;
-}
-
-:root.dark .logo-completo-claro {
-    display: none;
-}
-
-:root.dark .logo-completo-oscuro {
-    display: block;
 }
 
 [data-flux-sidebar-collapsed-desktop] .logo-completo-claro,
@@ -416,7 +427,7 @@ a.kpi:hover {
 
 /* ============================================================================
    Botones de acción de las tablas (PowerGrid). Cada función tiene su color:
-     celeste = ver pagos | ámbar = editar | violeta = renovar y permisos
+     celeste = ver pagos | ámbar = editar | azul marino = renovar y permisos
      verde = activar / reactivar | rojo = desactivar / dar de baja
    Están definidos aquí, en CSS normal, y no con clases de Tailwind dentro de los *Tabla.php:
    Tailwind solo genera las clases que encuentra en los archivos que escanea, y esos no se escanean.
@@ -449,7 +460,7 @@ a.kpi:hover {
 .btn-accion:hover {
     background: var(--b-hover);
     transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(45, 27, 88, 0.14);
+    box-shadow: 0 3px 8px rgba(15, 31, 61, 0.14);
 }
 
 .btn-accion:focus-visible {
@@ -470,10 +481,10 @@ a.kpi:hover {
     --b-hover: #fde68a;
 }
 .btn-violeta {
-    --b-fondo: #ede9fe;
-    --b-borde: #c4b5fd;
-    --b-icono: #6d28d9;
-    --b-hover: #ddd6fe;
+    --b-fondo: #e8eefc;
+    --b-borde: #c3d3f7;
+    --b-icono: #1e3a8a;
+    --b-hover: #d5e1fa;
 }
 .btn-verde {
     --b-fondo: #d1fae5;
@@ -501,10 +512,10 @@ a.kpi:hover {
     --b-hover: rgba(251, 191, 36, 0.26);
 }
 :root.dark .btn-violeta {
-    --b-fondo: rgba(167, 139, 250, 0.16);
-    --b-borde: rgba(167, 139, 250, 0.4);
-    --b-icono: #c4b5fd;
-    --b-hover: rgba(167, 139, 250, 0.28);
+    --b-fondo: rgba(96, 165, 250, 0.16);
+    --b-borde: rgba(96, 165, 250, 0.4);
+    --b-icono: #93b4f5;
+    --b-hover: rgba(96, 165, 250, 0.28);
 }
 :root.dark .btn-verde {
     --b-fondo: rgba(52, 211, 153, 0.14);
