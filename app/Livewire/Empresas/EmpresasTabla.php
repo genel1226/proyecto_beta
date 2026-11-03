@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
-use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Facades\Filter;
 use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
@@ -19,6 +18,12 @@ use PowerComponents\LivewirePowerGrid\PowerGridFields;
 final class EmpresasTabla extends PowerGridComponent
 {
     public string $tableName = 'empresasTablaTable';
+
+    // Orden por defecto: la última empresa creada primero (el id crece con cada alta).
+    // Si el usuario ordena por otra columna, esa elección manda hasta que recargue.
+    public string $sortField = 'id';
+
+    public string $sortDirection = 'desc';
 
     public function setUp(): array
     {
@@ -30,6 +35,12 @@ final class EmpresasTabla extends PowerGridComponent
             PowerGrid::footer()
                 ->showPerPage()
                 ->showRecordCount(),
+
+            // Detalle desplegable de cada fila (razón social, NIT, correo, teléfono, etc.), como en Licencias.
+            // Se abre con el botón "Ver detalles" que va junto al menú de tres puntos (campo acciones_menu).
+            // Ver resources/views/livewire/empresas/detalle.blade.php
+            PowerGrid::detail()
+                ->view('livewire.empresas.detalle'),
         ];
     }
 
@@ -97,14 +108,16 @@ final class EmpresasTabla extends PowerGridComponent
                 );
             })
 
-            // Último pago registrado de esta empresa (de cualquiera de sus licencias).
-            ->add('ultimo_pago', function (Empresa $model) {
-                $fecha = DB::table('licencia_pagos as p')
-                    ->join('licencias as l', 'l.id', '=', 'p.licencia_id')
-                    ->where('l.empresa_id', $model->id)
-                    ->max('p.fecha_pago');
+            // Usuarios contratados: suma de los usuarios de sus licencias activas (vigentes o por vencer), de todos los
+            // tipos. El desglose por tipo está en el detalle desplegable.
+            ->add('usuarios_total', function (Empresa $model) {
+                $total = (int) $model->licencias()
+                    ->whereIn('estado', ['V', 'X'])
+                    ->withSum('detalleUsuarios as usuarios', 'cantidad')
+                    ->get()
+                    ->sum('usuarios');
 
-                return $fecha ? Carbon::parse($fecha)->format('d/m/Y') : '—';
+                return $total > 0 ? (string) $total : '—';
             })
 
             // Próximo pago = vencimiento de su licencia vigente (o por vencer).
@@ -134,9 +147,23 @@ final class EmpresasTabla extends PowerGridComponent
                 );
             })
 
+            // Menú de tres puntos con las acciones de la fila + botón "Ver detalles" a su izquierda
+            // (components/menu-acciones.blade.php, el mismo de Licencias).
+            ->add('acciones_menu', function (Empresa $model) {
+                return Blade::render(
+                    '<x-menu-acciones :items="$items" :detalle="$detalle" />',
+                    ['items' => $this->accionesDe($model), 'detalle' => "toggleDetail('{$model->id}')"]
+                );
+            })
+
             ->add('created_at_formatted', fn(Empresa $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
     }
 
+    /**
+     * La tabla muestra lo esencial; el resto (razón social, NIT, correo, teléfono, país, último pago...)
+     * está en el detalle desplegable. Las columnas ocultas siguen siendo buscables: el buscador de arriba
+     * encuentra una empresa por su razón social, NIT, correo, teléfono o país aunque no se vean.
+     */
     public function columns(): array
     {
         return [
@@ -146,54 +173,27 @@ final class EmpresasTabla extends PowerGridComponent
                 ->sortable()
                 ->searchable(),
 
-            Column::make('Razón social', 'razon_social')
-                ->sortable()
-                ->searchable(),
-
             Column::make('Nombre comercial', 'nombre_comercial')
                 ->sortable()
                 ->searchable(),
 
-            Column::make('NIT', 'nit')
-                ->sortable()
-                ->searchable(),
-
-            // Column::make('Slug', 'slug')
-            //     ->sortable()
-            //     ->searchable(),
-
-            Column::make('Email', 'email')
-                ->sortable()
-                ->searchable(),
-
-            Column::make('Teléfono', 'telefono')
-                ->sortable()
-                ->searchable(),
-
-            Column::make('País', 'pais')
-                ->sortable()
-                ->searchable(),
-
-            // Column::make('Dirección', 'direccion')
-            //     ->sortable()
-            //     ->searchable(),
+            Column::make('Razón social', 'razon_social')->searchable()->hidden(),
+            Column::make('NIT', 'nit')->searchable()->hidden(),
+            Column::make('Email', 'email')->searchable()->hidden(),
+            Column::make('Teléfono', 'telefono')->searchable()->hidden(),
+            Column::make('País', 'pais')->searchable()->hidden(),
 
             Column::make('Licencia', 'licencia_badge'),
 
-            Column::make('Último pago', 'ultimo_pago'),
+            Column::make('Usuarios', 'usuarios_total'),
 
             Column::make('Próximo pago', 'proximo_pago'),
 
             Column::make('Estado', 'estado_badge', 'active')
                 ->sortable(),
 
-            // Column::make('Created at', 'created_at_formatted', 'created_at')
-            //     ->sortable(),
-
-            // La columna de acciones SIEMPRE se declara: PowerGrid la exige porque esta clase
-            // define actions(), aunque para este usuario no haya botones. Lo que varía por
-            // permiso es qué botones aparecen dentro.
-            Column::action('Acciones'),
+            // Una sola columna con "Ver detalles" + el menú de tres puntos.
+            Column::make('Acciones', 'acciones_menu'),
         ];
     }
 
@@ -201,50 +201,45 @@ final class EmpresasTabla extends PowerGridComponent
     {
         return [
             Filter::inputText('cod')->operators(['contains']),
-            Filter::inputText('razon_social')->operators(['contains']),
             Filter::inputText('nombre_comercial')->operators(['contains']),
-            Filter::inputText('nit')->operators(['contains']),
-            Filter::inputText('email')->operators(['contains']),
-            Filter::inputText('telefono')->operators(['contains']),
-            Filter::inputText('pais')->operators(['contains']),
             Filter::boolean('active'),
         ];
     }
 
-    /**
-     * Los botones se deciden fila por fila y solo aparecen si el usuario
-     * tiene el permiso. Los dos disparan un evento que escucha el componente
-     * Empresas (el del modal), que vuelve a validar el permiso en el servidor.
-     */
-    public function actions(Empresa $row): array
+    // Los items del menú llaman a estos métodos; cada uno reenvía el aviso al componente Empresas (el del
+    // modal), que vuelve a validar el permiso en el servidor.
+
+    public function editarEmpresa(int $id): void
     {
-        $botones = [];
+        $this->dispatch('editar-empresa', id: $id);
+    }
+
+    public function estadoEmpresa(int $id): void
+    {
+        $this->dispatch('confirmar-estado-empresa', id: $id);
+    }
+
+    /**
+     * Las acciones se deciden fila por fila y solo aparecen si el usuario tiene el permiso. Van dentro del
+     * menú de tres puntos (los íconos de colores de siempre, cada uno con su tooltip).
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function accionesDe(Empresa $row): array
+    {
+        $items = [];
+        $id = (int) $row->id;
 
         if (Gate::allows('empresas.edit')) {
-            $botones[] = Button::add('edit')
-                ->slot(Blade::render('<flux:icon.pencil-square class="size-4" />'))
-                ->id()
-                ->class('btn-accion btn-ambar')
-                ->tooltip('Editar empresa')
-                ->dispatch('editar-empresa', ['id' => $row->id]);
+            $items[] = ['wire' => "editarEmpresa({$id})", 'etiqueta' => 'Editar empresa', 'icono' => 'pencil-square', 'clase' => 'btn-ambar'];
         }
 
         if (Gate::allows('empresas.desactivar')) {
-            $botones[] = $row->active
-                ? Button::add('estado')
-                ->slot(Blade::render('<flux:icon.no-symbol class="size-4" />'))
-                ->id()
-                ->class('btn-accion btn-rojo')
-                ->tooltip('Desactivar empresa')
-                ->dispatch('confirmar-estado-empresa', ['id' => $row->id])
-                : Button::add('estado')
-                ->slot(Blade::render('<flux:icon.check-circle class="size-4" />'))
-                ->id()
-                ->class('btn-accion btn-verde')
-                ->tooltip('Reactivar empresa')
-                ->dispatch('confirmar-estado-empresa', ['id' => $row->id]);
+            $items[] = $row->active
+                ? ['wire' => "estadoEmpresa({$id})", 'etiqueta' => 'Desactivar empresa', 'icono' => 'no-symbol', 'clase' => 'btn-rojo']
+                : ['wire' => "estadoEmpresa({$id})", 'etiqueta' => 'Reactivar empresa', 'icono' => 'check-circle', 'clase' => 'btn-verde'];
         }
 
-        return $botones;
+        return $items;
     }
 }

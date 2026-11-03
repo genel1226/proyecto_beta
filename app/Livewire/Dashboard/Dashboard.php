@@ -11,7 +11,7 @@ use Livewire\Component;
 /**
  * Panel de monitoreo. No tiene un permiso propio: cualquier usuario con
  * sesión puede abrirlo, y cada bloque aparece solo si tiene el permiso del
- * módulo que muestra (licenses.index, empresas.index, pagos.index). Todo lo
+ * módulo que muestra (licenses.index, empresas.index). Todo lo
  * que sea dinero exige además reportes.montos.
  *
  * Los datos se calculan en render() y se pasan a la vista; no son
@@ -23,34 +23,37 @@ class Dashboard extends Component
     {
         $verLicencias = Gate::allows('licenses.index');
         $verEmpresas = Gate::allows('empresas.index');
-        $verPagos = Gate::allows('pagos.index');
         $verMontos = Gate::allows('reportes.montos');
 
         $estados = $verLicencias ? $this->conteoPorEstado() : [];
+        $vencimientos = $verLicencias ? $this->proximosVencimientos() : [];
+        $demos = $verEmpresas ? $this->demos() : [];
 
         return view('livewire.dashboard.dashboard', [
             'verLicencias' => $verLicencias,
             'verEmpresas' => $verEmpresas,
-            'verPagos' => $verPagos,
             'verMontos' => $verMontos,
-            'hayAlgo' => $verLicencias || $verEmpresas || $verPagos || $verMontos,
+            'hayAlgo' => $verLicencias || $verEmpresas || $verMontos,
 
             'estados' => $estados,
             'porVencer' => $verLicencias ? $this->licenciasPorVencer() : 0,
-            'vencimientos' => $verLicencias ? $this->proximosVencimientos() : [],
+            'vencimientos' => $vencimientos,
+            // Escala de la línea de tiempo: al menos 7 días, o hasta el vencimiento más lejano mostrado.
+            'spanVencimientos' => max(7, (int) collect($vencimientos)->max('dias')),
 
             'empresasActivas' => $verEmpresas ? Empresa::where('active', 1)->count() : 0,
-            'demos' => $verEmpresas ? $this->demos() : [],
+            'demos' => $demos,
+            // Las pruebas suelen durar 15 días; si alguna dura más, la escala se ajusta.
+            'spanDemos' => max(15, (int) collect($demos)->max('dias')),
             'demosEnCurso' => $verEmpresas
                 ? Empresa::whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', now())->count()
                 : 0,
-
-            'pagosRecientes' => $verPagos ? $this->pagosRecientes($verMontos) : [],
 
             'facturadoMes' => $verMontos
                 ? (float) LicenciaPago::where('fecha_pago', '>=', now()->startOfMonth())->sum('monto')
                 : 0.0,
             'facturacionMeses' => $verMontos ? $this->facturacionSeisMeses() : [],
+            'topEmpresas' => $verMontos ? $this->topEmpresas() : [],
         ]);
     }
 
@@ -90,7 +93,7 @@ class Dashboard extends Component
      * Las 8 licencias vigentes que vencen primero, con su color de urgencia
      * (mismos umbrales que el badge de la tabla de Licencias).
      *
-     * @return array<int, array{empresa:string, codigo:string, plan:string, fecha:string, color:string, texto:string}>
+     * @return array<int, array{dias:int, empresa:string, codigo:string, plan:string, fecha:string, color:string, texto:string}>
      */
     private function proximosVencimientos(): array
     {
@@ -114,6 +117,7 @@ class Dashboard extends Component
                 };
 
                 return [
+                    'dias' => $dias,
                     'empresa' => $licencia->empresa?->nombre_comercial ?? '—',
                     'codigo' => (string) $licencia->codigo_licencia,
                     'plan' => $licencia->plan?->nombre ?? '—',
@@ -129,7 +133,7 @@ class Dashboard extends Component
      * Cuentas demo ordenadas por fin de prueba: las que están por terminar
      * (o ya terminaron) primero, para saber a quién darle seguimiento.
      *
-     * @return array<int, array{cod:string, nombre:string, fecha:string, color:string, texto:string}>
+     * @return array<int, array{dias:int, cod:string, nombre:string, fecha:string, color:string, texto:string}>
      */
     private function demos(): array
     {
@@ -150,6 +154,7 @@ class Dashboard extends Component
                 };
 
                 return [
+                    'dias' => $dias,
                     'cod' => (string) $empresa->cod,
                     'nombre' => (string) $empresa->nombre_comercial,
                     'fecha' => $empresa->trial_ends_at->format('d/m/Y'),
@@ -161,23 +166,51 @@ class Dashboard extends Component
     }
 
     /**
-     * Los últimos 6 pagos. El monto va en null si el usuario no puede ver montos.
+     * Las 5 empresas que más ingresos han generado (suma histórica de todos sus
+     * pagos, de todas sus licencias). 'porcentaje' es su parte del total facturado
+     * y 'ancho' el largo de la barra respecto a la primera. Solo se pide con
+     * reportes.montos.
      *
-     * @return array<int, array{empresa:string, codigo:string, tipo:string, fecha:string, monto:?float}>
+     * @return array<int, array{empresa:string, total:float, porcentaje:int, ancho:int}>
      */
-    private function pagosRecientes(bool $verMontos): array
+    private function topEmpresas(): array
     {
-        return LicenciaPago::with('licencia.empresa')
-            ->orderByDesc('fecha_pago')
-            ->limit(6)
+        $porLicencia = LicenciaPago::query()
+            ->selectRaw('licencia_id, SUM(monto) as total')
+            ->groupBy('licencia_id')
+            ->pluck('total', 'licencia_id');
+
+        if ($porLicencia->isEmpty()) {
+            return [];
+        }
+
+        $licencias = ModelsLicencias::with('empresa')
+            ->whereKey($porLicencia->keys()->all())
             ->get()
-            ->map(fn($pago) => [
-                'empresa' => $pago->licencia?->empresa?->nombre_comercial ?? '—',
-                'codigo' => (string) ($pago->licencia?->codigo_licencia ?? '—'),
-                // Sin fecha_vencimiento_anterior fue la venta inicial; con ella, una renovación.
-                'tipo' => $pago->fecha_vencimiento_anterior ? 'Renovación' : 'Venta / activación',
-                'fecha' => $pago->fecha_pago->format('d/m/Y H:i'),
-                'monto' => $verMontos ? (float) $pago->monto : null,
+            ->keyBy(fn($licencia) => $licencia->getKey());
+
+        // Varias licencias pueden ser de la misma empresa: se suman por empresa.
+        $porEmpresa = $porLicencia
+            ->groupBy(fn($total, $licenciaId) => $licencias[$licenciaId]?->empresa_id ?? 0, preserveKeys: true)
+            ->map(function ($grupo, $empresaId) use ($licencias) {
+                $primera = $licencias[$grupo->keys()->first()] ?? null;
+
+                return [
+                    'empresa' => $primera?->empresa?->nombre_comercial ?? '—',
+                    'total' => (float) $grupo->sum(),
+                ];
+            })
+            ->sortByDesc('total')
+            ->values();
+
+        $granTotal = max(1.0, (float) $porEmpresa->sum('total'));
+        $maximo = max(1.0, (float) $porEmpresa->max('total'));
+
+        return $porEmpresa
+            ->take(5)
+            ->map(fn(array $e) => $e + [
+                'porcentaje' => (int) round($e['total'] / $granTotal * 100),
+                'ancho' => max(3, (int) round($e['total'] / $maximo * 100)),
             ])
             ->all();
     }

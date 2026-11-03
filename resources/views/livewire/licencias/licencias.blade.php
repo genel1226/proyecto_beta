@@ -23,8 +23,7 @@
             {{-- Solo aparece editando una licencia ya existente --}}
             @can('pagos.index')
                 @if ($licencia_id)
-                    <flux:button size="sm" variant="ghost" icon="banknotes"
-                        wire:click="verPagos({{ $licencia_id }})">
+                    <flux:button size="sm" variant="ghost" icon="banknotes" wire:click="verPagos({{ $licencia_id }})">
                         Ver historial de pagos
                     </flux:button>
                 @endif
@@ -50,19 +49,19 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
-                        <flux:select wire:model.live="empresa_id" wire:blur="validarCampo('empresa_id')"
-                            label="Empresa" :disabled="(bool) $licencia_id"
-                            placeholder="Selecciona una empresa...">
+                        <flux:select wire:model.live="empresa_id" wire:blur="validarCampo('empresa_id')" label="Empresa"
+                            :disabled="(bool) $licencia_id">
+                            <flux:select.option value="">Selecciona una empresa...</flux:select.option>
                             @foreach ($empresas as $empresa)
                                 <flux:select.option value="{{ $empresa->id }}">{{ $empresa->razon_social }}
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
 
-                        <flux:select wire:model.live="periodicidad" label="Periodo">
+                        <flux:select wire:model.live="periodicidad" label="Periodo"
+                            wire:blur="validarCampo('periodicidad')" placeholder="Selecciona un periodo...">
                             <flux:select.option value="M">Mensual</flux:select.option>
                             <flux:select.option value="A">Anual</flux:select.option>
-                            <flux:select.option value="P">Personalizada</flux:select.option>
                         </flux:select>
                     </div>
 
@@ -72,7 +71,8 @@
                             wire:blur="validarCampo('start_date')"
                             :min="$licencia_id ? null : now()->format('Y-m-d')" />
                         <flux:input label="Fecha de vencimiento" type="date" wire:model.live="end_date"
-                            wire:blur="validarCampo('end_date')" :min="$this->minEndDate" />
+                            wire:blur="validarCampo('end_date')" :min="$this->minEndDate"
+                            :disabled="$periodicidad === '' || $start_date === ''" />
                     </div>
 
                     {{-- Plan: control segmentado, no un dropdown --}}
@@ -101,8 +101,7 @@
                     @if (!$licencia_id)
                         <flux:field>
                             <flux:label>Estado inicial</flux:label>
-                            <flux:radio.group wire:model.live="estado_inicial" variant="segmented"
-                                class="w-full">
+                            <flux:radio.group wire:model.live="estado_inicial" variant="segmented" class="w-full">
                                 <flux:radio value="V" class="flex-1">
                                     <div class="text-center">Vigente</div>
                                 </flux:radio>
@@ -166,22 +165,25 @@
                             @php
                                 $minimo = $calculo['minimo_usuarios'];
                                 $total = $calculo['cantidad_total'];
-                                $pct = min(100, (int) round($total / $minimo * 100));
+                                $pct = min(100, (int) round(($total / $minimo) * 100));
                             @endphp
 
                             @if ($calculo['faltan'] === 0)
                                 <div
                                     class="mt-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-4 text-sm text-emerald-800 dark:text-emerald-300">
-                                    <strong>Mínimo cumplido:</strong> {{ $total }} de {{ $minimo }} usuarios.
+                                    <strong>Mínimo cumplido:</strong> {{ $total }} de {{ $minimo }}
+                                    usuarios.
                                 </div>
                             @elseif ($exigeUsuarios)
                                 <div
                                     class="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200">
                                     <strong>Este plan necesita mínimo {{ $minimo }} usuarios.</strong>
-                                    Ahora tienes {{ $total }}, te faltan <strong>{{ $calculo['faltan'] }}</strong>
+                                    Ahora tienes {{ $total }}, te faltan
+                                    <strong>{{ $calculo['faltan'] }}</strong>
                                     para poder guardar la licencia.
                                     <div class="h-2 mt-3 rounded-full bg-amber-200 dark:bg-amber-900 overflow-hidden">
-                                        <div class="h-full rounded-full bg-amber-500" style="width: {{ $pct }}%"></div>
+                                        <div class="h-full rounded-full bg-amber-500"
+                                            style="width: {{ $pct }}%"></div>
                                     </div>
                                     <div class="text-xs mt-1">{{ $total }} de {{ $minimo }}</div>
                                 </div>
@@ -189,7 +191,8 @@
                                 <div
                                     class="mt-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 p-4 text-sm text-blue-900 dark:text-blue-200">
                                     Este plan necesita mínimo <strong>{{ $minimo }}</strong> usuarios para poder
-                                    activarse. Ahora tienes {{ $total }}. Mientras esté En proceso puedes dejarlo
+                                    activarse. Ahora tienes {{ $total }}. Mientras esté En proceso puedes
+                                    dejarlo
                                     incompleto.
                                 </div>
                             @endif
@@ -260,14 +263,13 @@
                                 <div
                                     class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
                                     <flux:icon.lock-closed class="size-3" />
-                                    MONTO TOTAL — calculado automáticamente
+                                    MONTO TOTAL
                                 </div>
                                 <div
                                     class="text-3xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-400">
                                     ${{ number_format($calculo['total'], 2) }}
                                 </div>
-                                <div class="text-xs text-zinc-500 mt-1">plan + usuarios − descuento. No es
-                                    editable.
+                                <div class="text-xs text-zinc-500 mt-1">plan + usuarios − descuento.
                                 </div>
                             </div>
                         @endif
@@ -277,12 +279,7 @@
 
             <div class="flex items-center gap-3">
                 <flux:spacer />
-                @if ($exigeUsuarios && $calculo['minimo_usuarios'] > 1 && $calculo['faltan'] > 0)
-                    <flux:text class="text-xs">El botón se activa al llegar a {{ $calculo['minimo_usuarios'] }}
-                        usuarios.</flux:text>
-                @endif
-                <flux:button type="button" wire:click="guardar" variant="primary"
-                    :disabled="! $this->puedeGuardar">
+                <flux:button type="button" wire:click="guardar" variant="primary" :disabled="! $this->puedeGuardar">
                     {{ $licencia_id ? 'Guardar cambios' : 'Guardar licencia' }}
                 </flux:button>
             </div>

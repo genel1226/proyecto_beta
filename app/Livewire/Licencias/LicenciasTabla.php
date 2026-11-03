@@ -8,7 +8,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
-use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Facades\Filter;
 use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
@@ -18,6 +17,12 @@ use PowerComponents\LivewirePowerGrid\PowerGridFields;
 final class LicenciasTabla extends PowerGridComponent
 {
     public string $tableName = 'licenciasTablaTable';
+
+    // Orden por defecto: la última licencia creada primero (el id crece con cada alta).
+    // Si el usuario ordena por otra columna, esa elección manda hasta que recargue.
+    public string $sortField = 'id';
+
+    public string $sortDirection = 'desc';
 
     public function setUp(): array
     {
@@ -29,6 +34,13 @@ final class LicenciasTabla extends PowerGridComponent
             PowerGrid::footer()
                 ->showPerPage()
                 ->showRecordCount(),
+
+            // Detalle desplegable de cada fila con los datos menos importantes
+            // (ver resources/views/livewire/licencias/detalle.blade.php).
+            // Sin flecha propia (showCollapseIcon): el detalle se abre con el botón "Ver detalles"
+            // que va junto al menú de tres puntos (campo acciones_menu). Pueden quedar varias filas abiertas a la vez.
+            PowerGrid::detail()
+                ->view('livewire.licencias.detalle'),
         ];
     }
 
@@ -141,6 +153,16 @@ final class LicenciasTabla extends PowerGridComponent
                 );
             })
 
+            // Menú de tres puntos con las acciones de la fila (components/menu-acciones.blade.php).
+            // Se dibuja con Blade::render igual que los badges, así no depende de la versión de PowerGrid.
+            ->add('acciones_menu', function (Licencia $model) {
+                // "Ver detalles" va siempre, a la izquierda del menú de tres puntos; el menú solo si hay acciones.
+                return Blade::render(
+                    '<x-menu-acciones :items="$items" :detalle="$detalle" />',
+                    ['items' => $this->accionesDe($model), 'detalle' => "toggleDetail('{$model->id}')"]
+                );
+            })
+
             ->add('observaciones')
             ->add('created_at_formatted', fn(Licencia $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
     }
@@ -168,13 +190,9 @@ final class LicenciasTabla extends PowerGridComponent
                 ->searchable(),
 
 
-            Column::make('Fecha inicio', 'fecha_inicio_formatted', 'fecha_inicio')
-                ->sortable(),
-
+            // Fecha de inicio, periodicidad, descuento, observaciones, renovaciones y fecha de alta
+            // viven en el detalle desplegable de cada fila: la tabla queda sin scroll horizontal.
             Column::make('Fecha vencimiento', 'fecha_vencimiento_formatted', 'fecha_vencimiento')
-                ->sortable(),
-
-            Column::make('Periodicidad', 'periodicidad_formatted', 'periodicidad')
                 ->sortable(),
 
             ...$this->cuando(Gate::allows('licenses.monto.ver'), [
@@ -182,33 +200,22 @@ final class LicenciasTabla extends PowerGridComponent
                     ->sortable(),
             ]),
 
-            ...$this->cuando(Gate::allows('licenses.descuento.ver'), [
-                Column::make('Descuento', 'descuento')
-                    ->sortable(),
-            ]),
-
-            // Column::make('Moneda', 'moneda')
-            //     ->sortable(),
-
             // Estado como badge de color, en vez del char crudo (V/X/N/P/C)
             Column::make('Estado', 'estado_badge', 'estado')
                 ->sortable(),
 
-            Column::make('Renovada', 'renovada_badge'),
-
+            // Se puede seguir buscando por observaciones aunque la columna no se vea.
             ...$this->cuando(Gate::allows('licenses.observaciones.ver'), [
                 Column::make('Observaciones', 'observaciones')
-                    ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->hidden(),
             ]),
 
             // Column::make('Created at', 'created_at_formatted', 'created_at')
             //     ->sortable(),
 
-            // Siempre declarada: PowerGrid la exige porque la clase define
-            // actions() más abajo, sin importar si va a tener botones o no
-            // para este usuario.
-            Column::action('Action'),
+            // Una sola columna con el menú de tres puntos.
+            Column::make('Acciones', 'acciones_menu'),
         ];
     }
 
@@ -264,72 +271,57 @@ final class LicenciasTabla extends PowerGridComponent
     }
 
     /**
-     * Los botones se deciden fila por fila: solo aparecen si el usuario tiene
-     * el permiso Y el estado de la licencia admite esa acción.
+     * Las acciones se deciden fila por fila: solo aparecen si el usuario tiene
+     * el permiso Y el estado de la licencia admite esa acción. Todas van dentro
+     * de un menú de tres puntos (components/menu-acciones.blade.php) para que la
+     * columna sea angosta y no se desplace la tabla.
      *
      *   Vigente / Por vencer -> editar, renovar, dar de baja
      *   En proceso           -> editar, activar, dar de baja
      *   Cancelada            -> reactivar
      *   Vencida              -> nada (para seguir, se crea una licencia nueva)
+     *
+     * Devuelve los items del menú; fields() los dibuja en la columna 'acciones_menu'.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    public function actions(Licencia $row): array
+    private function accionesDe(Licencia $row): array
     {
-        $botones = [];
+        $items = [];
 
         $vigente = in_array($row->estado, ['V', 'X'], true);
         $enProceso = $row->estado === 'P';
         $cancelada = $row->estado === 'C';
+        $id = (int) $row->id;
 
         // Ver pagos no depende del estado: hasta una licencia Vencida o
         // Cancelada puede necesitar consultarse su historial.
         if (Gate::allows('pagos.index')) {
-            $botones[] = Button::add('ver-pagos')
-                ->slot(Blade::render('<flux:icon.banknotes class="size-4" />'))
-                ->id()
-                ->class('btn-accion btn-celeste')
-                ->tooltip('Ver historial de pagos')
-                ->dispatch('ver-pagos', ['rowId' => $row->id]);
+            $items[] = ['wire' => "verPagos({$id})", 'etiqueta' => 'Ver historial de pagos', 'icono' => 'banknotes', 'clase' => 'btn-celeste'];
         }
 
         if (($vigente || $enProceso) && Gate::allows('licenses.edit')) {
-            $botones[] = Button::add('edit')
-                ->slot(Blade::render('<flux:icon.pencil-square class="size-4" />'))
-                ->id()
-                ->class('btn-accion btn-ambar')
-                ->tooltip('Editar licencia')
-                ->dispatch('edit', ['rowId' => $row->id]);
+            $items[] = ['wire' => "edit({$id})", 'etiqueta' => 'Editar licencia', 'icono' => 'pencil-square', 'clase' => 'btn-ambar'];
         }
 
         if ($vigente && Gate::allows('licenses.renovar')) {
-            $botones[] = Button::add('renovar')
-                ->slot(Blade::render('<flux:icon.arrow-path class="size-4" />'))
-                ->id()
-                ->class('btn-accion btn-violeta')
-                ->tooltip('Renovar licencia')
-                ->dispatch('renovar', ['rowId' => $row->id]);
+            $items[] = ['wire' => "renovar({$id})", 'etiqueta' => 'Renovar licencia', 'icono' => 'arrow-path', 'clase' => 'btn-violeta'];
         }
 
         if (($enProceso || $cancelada) && Gate::allows('licenses.activar')) {
-            $titulo = $cancelada ? 'Reactivar licencia' : 'Activar licencia';
-
-            $botones[] = Button::add('activar')
-                ->slot(Blade::render('<flux:icon.check-circle class="size-4" />'))
-                ->id()
-                ->class('btn-accion btn-verde')
-                ->tooltip($titulo)
-                ->dispatch('activar', ['rowId' => $row->id]);
+            $items[] = [
+                'wire' => "activar({$id})",
+                'etiqueta' => $cancelada ? 'Reactivar licencia' : 'Activar licencia',
+                'icono' => 'check-circle',
+                'clase' => 'btn-verde',
+            ];
         }
 
         if (($vigente || $enProceso) && Gate::allows('licenses.baja')) {
-            $botones[] = Button::add('baja')
-                ->slot(Blade::render('<flux:icon.trash class="size-4" />'))
-                ->id()
-                ->class('btn-accion btn-rojo')
-                ->tooltip('Dar de baja la licencia')
-                ->dispatch('baja', ['rowId' => $row->id]);
+            $items[] = ['wire' => "baja({$id})", 'etiqueta' => 'Dar de baja la licencia', 'icono' => 'trash', 'clase' => 'btn-rojo'];
         }
 
-        return $botones;
+        return $items;
     }
 
     /**

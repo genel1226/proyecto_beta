@@ -43,9 +43,12 @@ return [
     | requests to have a field named 'email'. If the application uses
     | another name for the field you may define it below as needed.
     |
+    | Aquí el login se hace con la columna users.username (nombre de usuario).
+    | 'email' (más abajo) se mantiene porque "olvidé mi contraseña" sí usa el correo.
+    |
     */
 
-    'username' => 'email',
+    'username' => 'username',
 
     'email' => 'email',
 

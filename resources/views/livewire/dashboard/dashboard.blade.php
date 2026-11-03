@@ -49,6 +49,15 @@
                     backgroundColor: cfg.colores
                 };
 
+                // Barras de facturación: los meses anteriores en azul suave y el último (el actual) resaltado.
+                if (cfg.resaltarUltimo) {
+                    var suave = oscuro ? 'rgba(96,165,250,0.40)' : 'rgba(59,130,246,0.45)';
+                    var fuerte = oscuro ? '#93b4f5' : '#1d3260';
+                    dataset.backgroundColor = cfg.valores.map(function(v, i) {
+                        return i === cfg.valores.length - 1 ? fuerte : suave;
+                    });
+                }
+
                 if (cfg.tipo === 'bar') {
                     dataset.borderRadius = 4;
                     dataset.maxBarThickness = 48;
@@ -128,7 +137,7 @@
     @php
         $coloresHex = [
             'green' => '#22c55e',
-            'amber' => '#f59e0b',
+            'amber' => '#f5b301',
             'rose' => '#f43f5e',
             'blue' => '#3b82f6',
             'zinc' => '#a1a1aa',
@@ -148,7 +157,7 @@
             Todavía no tienes permisos para ver información en este panel. Pídele a un administrador que te los asigne.
         </flux:text>
     @else
-        {{-- ===== Indicadores: fondo suave e ícono en el color fuerte del mismo tono ===== --}}
+        {{-- ===== Indicadores: la tarjeta entera en el tono suave, ícono en el color fuerte ===== --}}
         <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             @if ($verLicencias)
                 <a href="{{ route('licencias') }}" wire:navigate class="kpi" data-tono="violeta">
@@ -212,101 +221,9 @@
         </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {{-- ===== Próximos vencimientos ===== --}}
-            @if ($verLicencias)
-                <div class="lg:col-span-2 tarjeta">
-                    <div class="flex items-center justify-between mb-2">
-                        <flux:heading size="sm">Próximos vencimientos</flux:heading>
-                        <a href="{{ route('licencias') }}" wire:navigate
-                            class="text-xs font-semibold text-accent-content hover:underline">Ver todas →</a>
-                    </div>
-
-                    <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                        @forelse ($vencimientos as $v)
-                            <div class="flex items-center justify-between gap-4 py-3">
-                                <div class="min-w-0">
-                                    <div class="font-medium text-sm truncate">{{ $v['empresa'] }}</div>
-                                    <div class="text-xs text-zinc-500">
-                                        {{ $v['codigo'] }} · {{ $v['plan'] }} · vence {{ $v['fecha'] }}
-                                    </div>
-                                </div>
-                                <flux:badge :color="$v['color']" size="sm">{{ $v['texto'] }}</flux:badge>
-                            </div>
-                        @empty
-                            <flux:text class="text-zinc-500 py-3">No hay licencias vigentes por vencer.</flux:text>
-                        @endforelse
-                    </div>
-                </div>
-            @endif
-
-            {{-- ===== Licencias por estado (dona) + cuentas demo ===== --}}
-            @if ($verLicencias || $verEmpresas)
-                <div class="space-y-6">
-                    @if ($verLicencias)
-                        <div class="tarjeta">
-                            <flux:heading size="sm" class="mb-3">Licencias por estado</flux:heading>
-
-                            @if ($totalLicencias === 0)
-                                <flux:text class="text-zinc-500">Todavía no hay licencias registradas.</flux:text>
-                            @else
-                                @php
-                                    $cfgEstados = [
-                                        'tipo' => 'doughnut',
-                                        'titulo' => 'Licencias',
-                                        'moneda' => false,
-                                        'etiquetas' => collect($etiquetasEstado)
-                                            ->map(fn($e, $c) => $e[0] . ' (' . $estados[$c] . ')')
-                                            ->values()
-                                            ->all(),
-                                        'valores' => collect($etiquetasEstado)
-                                            ->map(fn($e, $c) => $estados[$c])
-                                            ->values()
-                                            ->all(),
-                                        'colores' => collect($etiquetasEstado)
-                                            ->map(fn($e) => $coloresHex[$e[1]])
-                                            ->values()
-                                            ->all(),
-                                    ];
-                                @endphp
-
-                                {{-- wire:key con hash de los datos: si cambian, Livewire reemplaza el bloque y se dibuja uno nuevo --}}
-                                <div wire:key="grafico-estados-{{ md5(json_encode($cfgEstados)) }}"
-                                    class="relative h-64">
-                                    <div wire:ignore class="h-full">
-                                        <canvas x-init="(function r() { window.dibujarGrafico ? window.dibujarGrafico($el, @js($cfgEstados)) : setTimeout(r, 50) })()"></canvas>
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
-                    @endif
-
-                    @if ($verEmpresas)
-                        <div class="tarjeta">
-                            <flux:heading size="sm" class="mb-2">Cuentas demo</flux:heading>
-
-                            <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                                @forelse ($demos as $d)
-                                    <div class="flex items-center justify-between gap-3 py-2">
-                                        <div class="min-w-0">
-                                            <div class="text-sm font-medium truncate">{{ $d['nombre'] }}</div>
-                                            <div class="text-xs text-zinc-500">{{ $d['cod'] }} · hasta
-                                                {{ $d['fecha'] }}</div>
-                                        </div>
-                                        <flux:badge :color="$d['color']" size="sm">{{ $d['texto'] }}
-                                        </flux:badge>
-                                    </div>
-                                @empty
-                                    <flux:text class="text-zinc-500 py-1 text-sm">No hay cuentas demo.</flux:text>
-                                @endforelse
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            @endif
-
             {{-- ===== Facturación de los últimos 6 meses (barras) ===== --}}
             @if ($verMontos)
-                <div class="lg:col-span-2 tarjeta">
+                <div class="tarjeta {{ $verLicencias ? 'lg:col-span-2' : 'lg:col-span-3' }}">
                     <div class="flex items-center justify-between mb-4">
                         <flux:heading size="sm">Facturación de los últimos 6 meses</flux:heading>
                         <a href="{{ route('reportes') }}" wire:navigate
@@ -318,16 +235,17 @@
                             'tipo' => 'bar',
                             'titulo' => 'Facturado (USD)',
                             'moneda' => true,
+                            'resaltarUltimo' => true,
                             'etiquetas' => collect($facturacionMeses)
                                 ->pluck('etiqueta')
                                 ->map(fn($e) => \Illuminate\Support\Str::ucfirst($e))
                                 ->all(),
                             'valores' => collect($facturacionMeses)->pluck('total')->all(),
-                            'colores' => '#7a58b8',
+                            'colores' => '#3b82f6',
                         ];
                     @endphp
 
-                    <div wire:key="grafico-facturacion-{{ md5(json_encode($cfgFacturacion)) }}" class="relative h-56">
+                    <div wire:key="grafico-facturacion-{{ md5(json_encode($cfgFacturacion)) }}" class="relative h-64">
                         <div wire:ignore class="h-full">
                             <canvas x-init="(function r() { window.dibujarGrafico ? window.dibujarGrafico($el, @js($cfgFacturacion)) : setTimeout(r, 50) })()"></canvas>
                         </div>
@@ -335,33 +253,133 @@
                 </div>
             @endif
 
-            {{-- ===== Últimos pagos ===== --}}
-            @if ($verPagos)
-                <div class="tarjeta">
+            {{-- ===== Licencias por estado (dona) ===== --}}
+            @if ($verLicencias)
+                <div class="tarjeta {{ $verMontos ? '' : 'lg:col-span-3' }}">
+                    <flux:heading size="sm" class="mb-3">Licencias por estado</flux:heading>
+
+                    @if ($totalLicencias === 0)
+                        <flux:text class="text-zinc-500">Todavía no hay licencias registradas.</flux:text>
+                    @else
+                        @php
+                            $cfgEstados = [
+                                'tipo' => 'doughnut',
+                                'titulo' => 'Licencias',
+                                'moneda' => false,
+                                'etiquetas' => collect($etiquetasEstado)
+                                    ->map(fn($e, $c) => $e[0] . ' (' . $estados[$c] . ')')
+                                    ->values()
+                                    ->all(),
+                                'valores' => collect($etiquetasEstado)
+                                    ->map(fn($e, $c) => $estados[$c])
+                                    ->values()
+                                    ->all(),
+                                'colores' => collect($etiquetasEstado)
+                                    ->map(fn($e) => $coloresHex[$e[1]])
+                                    ->values()
+                                    ->all(),
+                            ];
+                        @endphp
+
+                        {{-- wire:key con hash de los datos: si cambian, Livewire reemplaza el bloque y se dibuja uno nuevo --}}
+                        <div wire:key="grafico-estados-{{ md5(json_encode($cfgEstados)) }}" class="relative h-64">
+                            <div wire:ignore class="h-full">
+                                <canvas x-init="(function r() { window.dibujarGrafico ? window.dibujarGrafico($el, @js($cfgEstados)) : setTimeout(r, 50) })()"></canvas>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            {{-- ===== Próximos vencimientos de licencias (línea de tiempo) ===== --}}
+            @if ($verLicencias)
+                <div class="lg:col-span-3 tarjeta">
                     <div class="flex items-center justify-between mb-2">
-                        <flux:heading size="sm">Últimos pagos</flux:heading>
-                        <a href="{{ route('pagos') }}" wire:navigate
-                            class="text-xs font-semibold text-accent-content hover:underline">Ver todos →</a>
+                        <flux:heading size="sm">Próximos vencimientos de licencias</flux:heading>
                     </div>
 
-                    <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                        @forelse ($pagosRecientes as $p)
-                            <div class="flex items-center justify-between gap-3 py-2">
-                                <div class="min-w-0">
-                                    <div class="text-sm font-medium truncate">{{ $p['empresa'] }}</div>
-                                    <div class="text-xs text-zinc-500">
-                                        {{ $p['codigo'] }} · {{ $p['tipo'] }} · {{ $p['fecha'] }}
-                                    </div>
-                                </div>
-                                @if ($p['monto'] !== null)
-                                    <div class="text-sm font-semibold tabular-nums">
-                                        ${{ number_format($p['monto'], 2) }}</div>
-                                @endif
+                    @if (count($vencimientos) === 0)
+                        <flux:text class="text-zinc-500 py-3">No hay licencias vigentes por vencer.</flux:text>
+                    @else
+                        <x-linea-tiempo :span="$spanVencimientos" :items="collect($vencimientos)
+                            ->map(fn($v) => [
+                                'dias' => $v['dias'],
+                                'nombre' => $v['empresa'],
+                                'texto' => $v['texto'],
+                                'color' => $v['color'],
+                                'detalle' => $v['codigo'] . ' · ' . $v['plan'] . ' · vence ' . $v['fecha'],
+                            ])
+                            ->all()" />
+                        <flux:text class="text-xs text-zinc-500">
+                            Cada punto es una licencia. Rojo: urgente (7 días o menos) · Amarillo: por vencer (hasta 15 días) ·
+                            Verde: tranquila. Pasa el cursor para ver el detalle.
+                        </flux:text>
+                    @endif
+                </div>
+            @endif
+
+            {{-- ===== Fin de prueba de las cuentas demo (línea de tiempo) ===== --}}
+            @if ($verEmpresas)
+                <div class="lg:col-span-3 tarjeta">
+                    <div class="flex items-center justify-between mb-2">
+                        <flux:heading size="sm">Fin de prueba de cuentas demo</flux:heading>
+                    </div>
+
+                    @if (count($demos) === 0)
+                        <flux:text class="text-zinc-500 py-3 text-sm">No hay cuentas demo.</flux:text>
+                    @else
+                        <x-linea-tiempo :span="$spanDemos" :items="collect($demos)
+                            ->map(fn($d) => [
+                                'dias' => $d['dias'],
+                                'nombre' => $d['nombre'],
+                                'texto' => $d['texto'],
+                                'color' => $d['color'],
+                                'detalle' => $d['cod'] . ' · hasta ' . $d['fecha'],
+                            ])
+                            ->all()" />
+                        <flux:text class="text-xs text-zinc-500">
+                            Cada punto es una cuenta demo. Amarillo: le quedan 3 días o menos, hay que darle seguimiento ·
+                            Rosa: prueba vencida · Azul: con tiempo.
+                        </flux:text>
+                    @endif
+                </div>
+            @endif
+
+            {{-- ===== Top 5 empresas por ingresos ===== --}}
+            @if ($verMontos)
+                <div class="lg:col-span-3 tarjeta">
+                    <div class="flex items-center justify-between mb-4">
+                        <flux:heading size="sm">Top 5 empresas que más ingresos generan</flux:heading>
+                        <a href="{{ route('reportes') }}" wire:navigate
+                            class="text-xs font-semibold text-accent-content hover:underline">Ver reportes →</a>
+                    </div>
+
+                    <div class="space-y-3">
+                        @forelse ($topEmpresas as $i => $e)
+                            <div class="flex items-center gap-3">
+                                <span
+                                    class="grid size-6 flex-none place-items-center rounded-full text-xs font-bold {{ $i === 0 ? 'bg-amber-500 text-white' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' }}">
+                                    {{ $i + 1 }}
+                                </span>
+                                <span class="w-32 flex-none truncate text-sm sm:w-48">{{ $e['empresa'] }}</span>
+                                <span class="h-3.5 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                                    <span
+                                        class="block h-full rounded-full {{ $i === 0 ? 'bg-[#1d3260] dark:bg-blue-300' : 'bg-blue-400/80 dark:bg-blue-400/60' }}"
+                                        style="width: {{ $e['ancho'] }}%"></span>
+                                </span>
+                                <span class="w-28 flex-none text-right text-sm font-semibold tabular-nums sm:w-32">
+                                    ${{ number_format($e['total'], 2) }}
+                                    <span class="font-normal text-zinc-500">{{ $e['porcentaje'] }}%</span>
+                                </span>
                             </div>
                         @empty
-                            <flux:text class="text-zinc-500 py-2 text-sm">Todavía no hay pagos registrados.</flux:text>
+                            <flux:text class="text-zinc-500 text-sm">Todavía no hay pagos registrados.</flux:text>
                         @endforelse
                     </div>
+
+                    <flux:text class="mt-3 text-xs text-zinc-500">
+                        Suma de todos los pagos de la empresa; el porcentaje es su parte del total facturado.
+                    </flux:text>
                 </div>
             @endif
         </div>

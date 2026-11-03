@@ -10,7 +10,7 @@
 
 /* ---------- Variables (claro y oscuro) ---------- */
 :root {
-    --t-fondo: #f3f4f6;
+    --t-fondo: #dde4ee; /* plata azulada: el margen alrededor del menú flotante ya no se ve blanco */
     --t-tarjeta: #ffffff;
     --t-borde: #e3e6ec;
     --t-sombra: 0 1px 2px rgba(15, 31, 61, 0.06);
@@ -112,12 +112,12 @@ body {
     [data-flux-sidebar] {
         /* !important: Flux fija la posición y la altura con estilos en línea */
         position: sticky !important;
-        top: 1rem !important;
+        top: 0.75rem !important;
         align-self: start !important;
-        height: calc(100dvh - 2rem) !important;
-        max-height: calc(100dvh - 2rem) !important;
+        height: calc(100dvh - 1.5rem) !important;
+        max-height: calc(100dvh - 1.5rem) !important;
 
-        margin: 1rem 0 1rem 1rem;
+        margin: 0.75rem 0 0.75rem 0.75rem;
         background: var(--t-menu);
         border: 0;
         border-radius: 0.75rem;
@@ -217,12 +217,13 @@ body {
 }
 
 /* ---------- Tarjetas de indicadores ----------
-   Tarjeta blanca con el ícono en una baldosa del color del tono. El color significa algo:
-   ámbar = atención, rosa = problema, azul = en proceso, verde = dinero / bien, turquesa = neutro positivo.
-   Sin tono, el indicador va en azul marino (color de la marca). */
+   La tarjeta entera va en el tono suave del color y el ícono en el tono fuerte del mismo color.
+   El color significa algo: amarillo = atención, rosa = problema, azul = en proceso, verde = dinero / bien,
+   turquesa = neutro positivo. Sin tono, el indicador va en azul marino (color de la marca). */
 .kpi {
-    --kpi-a: #e8eefc;
+    --kpi-a: #d6e1fb;
     --kpi-fuerte: #1e3a8a;
+    --kpi-etq: var(--kpi-fuerte);
     --kpi-texto: var(--t-muted);
 
     display: flex;
@@ -230,9 +231,14 @@ body {
     gap: 0.875rem;
     padding: 0.9rem 1rem;
     border-radius: 0.75rem;
-    border: 1px solid var(--t-borde);
-    background: var(--t-tarjeta);
-    box-shadow: var(--t-sombra);
+    /* Borde marcado + franja gruesa a la izquierda: así la tarjeta no se pierde contra el fondo gris azulado */
+    border: 1px solid color-mix(in srgb, var(--kpi-fuerte) 38%, transparent);
+    border-left: 5px solid var(--kpi-fuerte);
+    /* El tono va encima de la tarjeta para que también funcione con tonos translúcidos (modo oscuro) */
+    background: linear-gradient(var(--kpi-a), var(--kpi-a)), var(--t-tarjeta);
+    box-shadow:
+        0 1px 2px rgba(15, 31, 61, 0.1),
+        0 4px 12px rgba(15, 31, 61, 0.08);
     transition:
         transform 0.15s ease,
         box-shadow 0.15s ease;
@@ -251,7 +257,7 @@ a.kpi:hover {
     height: 2.75rem;
     border-radius: 0.6rem;
     color: var(--kpi-fuerte);
-    background: var(--kpi-a);
+    background: color-mix(in srgb, var(--kpi-fuerte) 16%, transparent);
 }
 
 .kpi-texto {
@@ -264,10 +270,10 @@ a.kpi:hover {
 
 .kpi-etiqueta {
     font-size: 0.6875rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--kpi-texto);
+    color: var(--kpi-etq);
 }
 
 .kpi-valor {
@@ -283,29 +289,31 @@ a.kpi:hover {
     color: var(--kpi-texto);
 }
 
+/* "Por vencer": amarillo (antes era un ámbar anaranjado) */
 .kpi[data-tono="ambar"] {
-    --kpi-a: #fef3c7;
-    --kpi-fuerte: #b45309;
+    --kpi-a: #ffeaa0;
+    --kpi-fuerte: #ca8a04;
+    --kpi-etq: #8a5d00; /* más oscuro solo para el texto pequeño, por legibilidad */
 }
 .kpi[data-tono="rosa"] {
-    --kpi-a: #fde8ef;
+    --kpi-a: #fbd5e3;
     --kpi-fuerte: #be185d;
 }
 .kpi[data-tono="azul"] {
-    --kpi-a: #e0ecff;
+    --kpi-a: #cfe1ff;
     --kpi-fuerte: #2563eb;
 }
 .kpi[data-tono="turquesa"] {
-    --kpi-a: #dcf5f1;
+    --kpi-a: #c6efe8;
     --kpi-fuerte: #0f766e;
 }
 .kpi[data-tono="verde"] {
-    --kpi-a: #dcf5e6;
+    --kpi-a: #c8eed7;
     --kpi-fuerte: #15803d;
 }
 /* "violeta" quedó de la marca anterior: ahora es el azul marino de siempre */
 .kpi[data-tono="violeta"] {
-    --kpi-a: #e8eefc;
+    --kpi-a: #d6e1fb;
     --kpi-fuerte: #1e3a8a;
 }
 
@@ -315,8 +323,8 @@ a.kpi:hover {
     --kpi-fuerte: #93b4f5;
 }
 :root.dark .kpi[data-tono="ambar"] {
-    --kpi-a: rgba(251, 191, 36, 0.14);
-    --kpi-fuerte: #fbbf24;
+    --kpi-a: rgba(250, 204, 21, 0.15);
+    --kpi-fuerte: #facc15;
 }
 :root.dark .kpi[data-tono="rosa"] {
     --kpi-a: rgba(244, 114, 182, 0.14);
@@ -337,6 +345,315 @@ a.kpi:hover {
 :root.dark .kpi[data-tono="violeta"] {
     --kpi-a: rgba(96, 165, 250, 0.14);
     --kpi-fuerte: #93b4f5;
+}
+/* En oscuro el amarillo ya tiene buen contraste: la etiqueta usa el mismo color fuerte */
+:root.dark .kpi[data-tono="ambar"] {
+    --kpi-etq: #facc15;
+}
+
+/* ---------- Línea de tiempo (vencimientos de licencias y fin de prueba de demos) ----------
+   Componente: resources/views/components/linea-tiempo.blade.php. Eje a la izquierda = hoy. */
+.linea-tiempo {
+    position: relative;
+    height: 100px;
+    min-width: 720px;
+    /* Márgenes a los lados: el primer y el último nombre están centrados en su punto y sobresalen medio ancho */
+    margin: 0.5rem 4.5rem 0;
+}
+.linea-eje {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50px;
+    height: 2px;
+    background: var(--t-borde);
+}
+/* "hoy": marca corta sobre el eje y la palabra en el margen izquierdo, para que no tape nombres */
+.linea-hoy {
+    position: absolute;
+    left: 0;
+    top: 38px;
+    height: 26px;
+    width: 2px;
+    background: #b8893b;
+}
+.linea-hoy::after {
+    content: "hoy";
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #b8893b;
+}
+.linea-punto {
+    position: absolute;
+    top: 42px;
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    border-radius: 50%;
+    border: 3px solid var(--t-tarjeta);
+    box-shadow: 0 0 0 1px var(--t-borde);
+}
+.linea-nombre,
+.linea-dato {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+.linea-nombre {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--t-texto-fuerte);
+}
+.linea-dato {
+    font-size: 0.65625rem;
+    color: var(--t-muted);
+}
+
+/* ---------- Detalle desplegable de las tablas (PowerGrid::detail) ----------
+   Mini tabla campo/valor. Usa las variables del tema para que se vea bien en claro y en oscuro. */
+.detalle-caja {
+    padding: 0.75rem 1rem 1rem;
+    background: var(--t-fondo);
+}
+.detalle-tabla {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    border: 1px solid var(--t-borde);
+    border-radius: 0.5rem;
+    background: var(--t-tarjeta);
+    font-size: 0.8125rem;
+}
+.detalle-tabla th,
+.detalle-tabla td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--t-borde);
+}
+.detalle-tabla tr:last-child th,
+.detalle-tabla tr:last-child td {
+    border-bottom: 0;
+}
+.detalle-tabla th {
+    width: 14%;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--t-muted);
+    background: color-mix(in srgb, var(--t-texto-fuerte) 5%, var(--t-tarjeta));
+}
+.detalle-tabla td {
+    width: 36%;
+    font-weight: 500;
+    color: var(--t-texto-fuerte);
+}
+@media (max-width: 767px) {
+    .detalle-caja {
+        padding-left: 1rem;
+    }
+    .detalle-tabla th,
+    .detalle-tabla td {
+        width: auto;
+    }
+}
+
+/* ---------- Menú de acciones de una fila (tres puntos) ---------- */
+.menu-acc-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    color: var(--t-muted);
+    background: transparent;
+    cursor: pointer;
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
+}
+.menu-acc-btn:hover,
+.menu-acc-btn[aria-expanded="true"] {
+    color: var(--t-texto-fuerte);
+    background: color-mix(in srgb, var(--t-texto-fuerte) 10%, transparent);
+}
+.menu-acc-btn svg {
+    width: 1.125rem;
+    height: 1.125rem;
+}
+.menu-acc-panel {
+    z-index: 60;
+    min-width: 12rem;
+    padding: 0.25rem;
+    border: 1px solid var(--t-borde);
+    border-radius: 0.6rem;
+    background: var(--t-tarjeta);
+    box-shadow: 0 8px 24px rgba(15, 31, 61, 0.18);
+}
+.menu-acc-item {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.4rem;
+    text-align: left;
+    font-size: 0.8125rem;
+    color: var(--t-texto-fuerte);
+    cursor: pointer;
+}
+.menu-acc-item:hover {
+    background: color-mix(in srgb, var(--t-texto-fuerte) 8%, transparent);
+}
+.menu-acc-peligro {
+    color: #e11d48;
+}
+.menu-acc-peligro:hover {
+    background: rgba(244, 63, 94, 0.12);
+}
+.menu-acc-iconos {
+    display: flex;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 0.4rem;
+}
+.menu-acc-sep {
+    height: 1px;
+    margin: 0.25rem 0;
+    background: var(--t-borde);
+}
+
+/* ---------- Pantalla de acceso (login, registro, recuperar contraseña) ----------
+   Layout: resources/views/components/layouts/auth/simple.blade.php
+   Formulario: resources/views/livewire/auth/login.blade.php. La imagen es public/images/login-paisaje.jpg. */
+.login-fondo {
+    position: fixed;
+    inset: 0;
+    background-color: #1470e0;
+    background-size: cover;
+    background-position: center bottom;
+}
+/* Velo suave para que la tarjeta destaque sobre el paisaje */
+.login-fondo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 30, 80, 0.28);
+}
+
+.login-tarjeta {
+    overflow: hidden;
+    border-radius: 1.25rem;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(4, 20, 60, 0.5);
+}
+
+.login-cabecera {
+    position: relative;
+    height: 15rem;
+}
+.login-ilustracion {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 62%;
+}
+.login-cabecera-texto {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 1.5rem 1.5rem 0;
+    text-align: center;
+    color: #fff;
+}
+.login-cabecera-texto h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-shadow: 0 2px 10px rgba(0, 30, 90, 0.45);
+}
+.login-cabecera-texto p {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.login-cuerpo {
+    padding: 1.75rem 2rem 2rem;
+    background: #fff;
+    color: #0d2a5c;
+}
+
+/* Título en píldora */
+.login-titulo {
+    padding: 0.55rem 2rem;
+    border-radius: 999px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+    background: linear-gradient(135deg, #1a8cff, #1257c9);
+    box-shadow: 0 6px 16px rgba(18, 87, 201, 0.35);
+}
+
+/* Campos de Flux (vienen del slot): píldora de azul claro, ícono azul, texto marino.
+   Solo los <input>: el checkbox de Flux es otro elemento (<ui-checkbox>) y no debe tomar este estilo.
+   El padding izquierdo deja lugar al ícono y el derecho al ojo de "ver contraseña". */
+.login-tarjeta
+    input[data-flux-control]:not([type="checkbox"]):not([type="radio"]) {
+    border: 0;
+    border-radius: 999px;
+    background: #cfe4fd;
+    color: #0d2a5c;
+    box-shadow: none;
+    padding-inline-start: 2.9rem;
+    padding-inline-end: 2.9rem;
+}
+.login-tarjeta input[data-flux-control]::placeholder {
+    color: #5f84b8;
+}
+.login-tarjeta [data-flux-input] svg {
+    color: #1470e0;
+}
+.login-tarjeta input[data-flux-control]:focus {
+    outline: 2px solid #1a8cff;
+    outline-offset: 1px;
+}
+
+/* Botón de ingreso: píldora azul, centrado */
+.login-tarjeta .login-boton,
+.login-tarjeta [data-flux-button].login-boton {
+    min-width: 9rem;
+    border-radius: 999px;
+    border: 0;
+    color: #fff;
+    background: linear-gradient(135deg, #1a8cff, #1257c9);
+    box-shadow: 0 6px 16px rgba(18, 87, 201, 0.35);
+}
+
+/* Texto del formulario siempre legible sobre blanco (la tarjeta no cambia en modo oscuro) */
+.login-tarjeta [data-flux-checkbox] ~ *,
+.login-tarjeta label {
+    color: #0d2a5c;
+}
+.login-tarjeta a[data-flux-link],
+.login-tarjeta a {
+    color: #1470e0;
+}
+
+@media (max-width: 420px) {
+    .login-cuerpo {
+        padding: 1.5rem 1.25rem 1.75rem;
+    }
 }
 
 /* ============================================================================
@@ -492,6 +809,12 @@ a.kpi:hover {
     --b-icono: #047857;
     --b-hover: #a7f3d0;
 }
+.btn-gris {
+    --b-fondo: #e8ebf0;
+    --b-borde: #cbd2dd;
+    --b-icono: #475569;
+    --b-hover: #d6dce6;
+}
 .btn-rojo {
     --b-fondo: #fee2e2;
     --b-borde: #fca5a5;
@@ -499,6 +822,12 @@ a.kpi:hover {
     --b-hover: #fecaca;
 }
 
+:root.dark .btn-gris {
+    --b-fondo: rgba(148, 163, 184, 0.14);
+    --b-borde: rgba(148, 163, 184, 0.4);
+    --b-icono: #cbd5e1;
+    --b-hover: rgba(148, 163, 184, 0.26);
+}
 :root.dark .btn-celeste {
     --b-fondo: rgba(56, 189, 248, 0.14);
     --b-borde: rgba(56, 189, 248, 0.4);

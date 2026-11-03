@@ -36,11 +36,11 @@ class Licencias extends Component
 
     public string $estado_inicial = 'V';
 
-    public string $start_date;
+    public string $start_date = '';
 
     public string $end_date = '';
 
-    public string $periodicidad = 'M';
+    public string $periodicidad = '';
 
     /**
      * Sin tipo a propósito: si el vendedor borra el campo numérico, el
@@ -110,7 +110,6 @@ class Licencias extends Component
     {
         Gate::authorize('licenses.index');
 
-        $this->start_date = now()->format('Y-m-d');
         $this->cargarCantidades();
     }
 
@@ -125,8 +124,14 @@ class Licencias extends Component
         $reglas = [
             'empresa_id' => ['required', 'exists:empresas,id'],
             'plan_id' => ['required', 'exists:plans,id'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after:start_date'],
+            // Al crear, el inicio no puede ser anterior a hoy; al editar sí (la licencia ya existía).
+            'start_date' => $editando
+                ? ['required', 'date']
+                : ['required', 'date', 'after_or_equal:today'],
+            // Al crear, el vencimiento no puede ser menor que inicio + 1 mes / 1 año (ver getMinEndDateProperty).
+            'end_date' => $editando
+                ? ['required', 'date', 'after:start_date']
+                : ['required', 'date', 'after_or_equal:' . $this->minEndDate],
             'periodicidad' => ['required', 'in:M,A,P'],
             'descuento' => ['nullable', 'numeric', 'min:0'],
         ];
@@ -145,6 +150,72 @@ class Licencias extends Component
     public function updated(string $property): void
     {
         $this->validarCampo($property);
+    }
+
+    protected function messages(): array
+    {
+        $minimo = match ($this->periodicidad) {
+            'M' => 'un mes',
+            'A' => 'un año',
+            default => 'un día',
+        };
+
+        return [
+            'start_date.after_or_equal' => 'La fecha de inicio no puede ser anterior a hoy.',
+            'end_date.after_or_equal' => "El vencimiento debe ser al menos {$minimo} después del inicio ({$this->fechaMinima()}).",
+        ];
+    }
+
+    /** Fecha mínima de vencimiento en formato legible (d/m/Y), para los mensajes de error. */
+    private function fechaMinima(): string
+    {
+        return Carbon::parse($this->minEndDate)->format('d/m/Y');
+    }
+
+    /** start_date como Carbon, o null si está vacío o no es una fecha válida. */
+    private function fechaInicio(): ?Carbon
+    {
+        if ($this->start_date === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', $this->start_date)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Mensual y Anual: el vencimiento se calcula solo a partir del inicio
+     * (sin pasarse de fin de mes: 31/01 + 1 mes = 28/02). Personalizada: lo elige el
+     * usuario, pero tiene que ser posterior al inicio.
+     */
+    private function recalcularVencimiento(): void
+    {
+        $inicio = $this->fechaInicio();
+
+        if (! $inicio) {
+            $this->end_date = '';
+        } elseif ($this->periodicidad === 'M') {
+            $this->end_date = $inicio->copy()->addMonthNoOverflow()->format('Y-m-d');
+        } elseif ($this->periodicidad === 'A') {
+            $this->end_date = $inicio->copy()->addYearNoOverflow()->format('Y-m-d');
+        } elseif ($this->end_date !== '' && $this->end_date <= $inicio->format('Y-m-d')) {
+            $this->end_date = '';
+        }
+
+        $this->resetValidation('end_date');
+    }
+
+    public function updatedStartDate(): void
+    {
+        $this->recalcularVencimiento();
+    }
+
+    public function updatedPeriodicidad(): void
+    {
+        $this->recalcularVencimiento();
     }
 
     /**
@@ -242,6 +313,7 @@ class Licencias extends Component
 
         $basicosCompletos = $this->empresa_id
             && $this->plan_id
+            && $this->periodicidad !== ''
             && $this->start_date !== ''
             && $this->end_date !== '';
 
@@ -276,8 +348,7 @@ class Licencias extends Component
      */
     public function nuevo(): void
     {
-        $this->reset(['licencia_id', 'codigo_actual', 'empresa_id', 'plan_id', 'estado_inicial', 'end_date', 'descuento', 'observaciones']);
-        $this->start_date = now()->format('Y-m-d');
+        $this->reset(['licencia_id', 'codigo_actual', 'empresa_id', 'plan_id', 'estado_inicial', 'start_date', 'end_date', 'periodicidad', 'descuento', 'observaciones']);
         $this->cargarCantidades();
         $this->resetErrorBag();
     }
@@ -410,9 +481,26 @@ class Licencias extends Component
         $this->refrescarErrorDetalle();
     }
 
+    /**
+     * Fecha de vencimiento más temprana que se puede elegir.
+     * Al crear: inicio + 1 mes (Mensual), + 1 año (Anual) o + 1 día (Personalizada).
+     * Al editar solo se exige que sea posterior al inicio (hay licencias viejas con otros plazos).
+     */
     public function getMinEndDateProperty(): string
     {
-        return $this->start_date ?: now()->format('Y-m-d');
+        $inicio = $this->fechaInicio() ?? today();
+
+        if ($this->licencia_id === null) {
+            if ($this->periodicidad === 'M') {
+                return $inicio->copy()->addMonthNoOverflow()->format('Y-m-d');
+            }
+
+            if ($this->periodicidad === 'A') {
+                return $inicio->copy()->addYearNoOverflow()->format('Y-m-d');
+            }
+        }
+
+        return $inicio->copy()->addDay()->format('Y-m-d');
     }
 
     /**
