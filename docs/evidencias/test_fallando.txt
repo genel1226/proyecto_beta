@@ -1,0 +1,31 @@
+# Regla rota a propósito: whereDate('fecha_vencimiento', '<=', $hoy) — 2026-11-12 16:10:20
+
+-            ->whereDate('fecha_vencimiento', '<', $hoy)
++            ->whereDate('fecha_vencimiento', '<=', $hoy)
+
+
+   FAIL  Tests\Feature\ProcesarLicenciasTest
+  ✓ it marca como vencida una licencia que venció ayer, suspende la emp… 0.14s  
+  ✓ it marca como por vencer una licencia vigente que vence en 10 días   0.01s  
+  ⨯ it no marca como vencida una licencia que vence hoy                  0.01s  
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\ProcesarLicenciasTest > it no marca como vencida un…   
+  Expecting 'N' not to be 'N'.
+
+  at tests/Feature/ProcesarLicenciasTest.php:78
+     74▕     $licencia = crearLicenciaDePrueba(['fecha_vencimiento' => today()]);
+     75▕ 
+     76▕     $this->artisan('licencias:procesar', ['--solo' => 'vencimientos'])->assertSuccessful();
+     77▕ 
+  ➜  78▕     expect($licencia->fresh()->estado)->not->toBe('N')
+     79▕         ->and($licencia->empresa->fresh()->active)->toBeTrue();
+     80▕ 
+     81▕     Mail::assertNotSent(LicenciaAlertaMail::class);
+     82▕ });
+
+  1   tests/Feature/ProcesarLicenciasTest.php:78
+
+
+  Tests:    1 failed, 2 passed (11 assertions)
+  Duration: 0.20s
+

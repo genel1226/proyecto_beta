@@ -1,0 +1,19 @@
+Demo de testing asistido por IA — tiempos por paso (2026-11-12)
+Tiempo de reloj del agente; no incluye las esperas por respuestas del usuario
+(permisos, instalación de php8.4-sqlite3, credenciales).
+
+Paso 1  Crear tests/Feature/ProcesarLicenciasTest.php (3 casos)          ~2 min 21 s
+        (lectura del comando, modelos, migraciones y factories incluida)
+Paso 2  Ejecutar tests y guardar tests.txt                               ~22 s
+Paso 3  Romper la regla (< por <=), capturar test_fallando.txt, restaurar ~1 s
+        (restauración verificada por sha256)
+Extra   Corregir UserFactory (empresa_id, username, role_id) y regenerar
+        tests.txt                                                        ~43 s
+Paso 4  Capturas con Playwright (6 PNG), incluida la instalación de
+        playwright-core y un reintento                                   ~1 min 27 s
+
+Extra 2 Arreglar los 14 tests de Auth/Settings (active en UserFactory,
+        login por username, / redirige a /dashboard) y regenerar
+        tests.txt                                                        ~32 s
+
+Total del agente                                                         ~5 min 27 s

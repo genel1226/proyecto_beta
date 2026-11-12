@@ -1,0 +1,78 @@
+# php artisan test tests/Feature/ProcesarLicenciasTest.php — 2026-11-12 16:14:09
+
+
+   PASS  Tests\Feature\ProcesarLicenciasTest
+  ✓ it marca como vencida una licencia que venció ayer, suspende la emp… 0.13s  
+  ✓ it marca como por vencer una licencia vigente que vence en 10 días   0.01s  
+  ✓ it no marca como vencida una licencia que vence hoy                  0.01s  
+
+  Tests:    3 passed (13 assertions)
+  Duration: 0.19s
+
+
+# php artisan test (suite completa) — 2026-11-12 16:14:09
+
+
+   PASS  Tests\Unit\ExampleTest
+  ✓ that true is true
+
+   PASS  Tests\Feature\Auth\AuthenticationTest
+  ✓ login screen can be rendered                                         0.13s  
+  ✓ users can authenticate using the login screen                        0.02s  
+  ✓ users can not authenticate with invalid password                     0.01s  
+  ✓ users with two factor enabled are redirected to two factor challeng… 0.01s  
+  ✓ users can logout                                                     0.01s  
+
+   PASS  Tests\Feature\Auth\EmailVerificationTest
+  ✓ email verification screen can be rendered                            0.01s  
+  ✓ email can be verified                                                0.01s  
+  ✓ email is not verified with invalid hash                              0.01s  
+  ✓ already verified user visiting verification link is redirected with… 0.01s  
+
+   PASS  Tests\Feature\Auth\PasswordConfirmationTest
+  ✓ confirm password screen can be rendered                              0.01s  
+
+   PASS  Tests\Feature\Auth\PasswordResetTest
+  ✓ reset password link screen can be rendered                           0.01s  
+  ✓ reset password link can be requested                                 0.21s  
+  ✓ reset password screen can be rendered                                0.22s  
+  ✓ password can be reset with valid token                               0.22s  
+
+   WARN  Tests\Feature\Auth\RegistrationTest
+  - registration screen can be rendered → Fortify feature [registration] is not enabled.
+  - new users can register → Fortify feature [registration] is not enabled.
+
+   PASS  Tests\Feature\Auth\TwoFactorChallengeTest
+  ✓ two factor challenge redirects to login when not authenticated       0.01s  
+  ✓ two factor challenge can be rendered                                 0.01s  
+
+   PASS  Tests\Feature\DashboardTest
+  ✓ guests are redirected to the login page                              0.01s  
+  ✓ authenticated users can visit the dashboard                          0.02s  
+
+   PASS  Tests\Feature\ExampleTest
+  ✓ home redirects to the dashboard                                      0.01s  
+
+   PASS  Tests\Feature\ProcesarLicenciasTest
+  ✓ it marca como vencida una licencia que venció ayer, suspende la emp… 0.01s  
+  ✓ it marca como por vencer una licencia vigente que vence en 10 días   0.01s  
+  ✓ it no marca como vencida una licencia que vence hoy                  0.01s  
+
+   PASS  Tests\Feature\Settings\ProfileUpdateTest
+  ✓ profile page is displayed                                            0.02s  
+  ✓ profile information can be updated                                   0.02s  
+  ✓ email verification status is unchanged when email address is unchan… 0.02s  
+  ✓ user can delete their account                                        0.01s  
+  ✓ correct password must be provided to delete account                  0.01s  
+
+   PASS  Tests\Feature\Settings\SecurityTest
+  ✓ security settings page can be rendered                               0.02s  
+  ✓ security settings page requires password confirmation when enabled   0.01s  
+  ✓ security settings page renders without two factor when feature is d… 0.01s  
+  ✓ two factor authentication disabled when confirmation abandoned betw… 0.01s  
+  ✓ password can be updated                                              0.03s  
+  ✓ correct password must be provided to update password                 0.03s  
+
+  Tests:    2 skipped, 34 passed (91 assertions)
+  Duration: 1.24s
+
